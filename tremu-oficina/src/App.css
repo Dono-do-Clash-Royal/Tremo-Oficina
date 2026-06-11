@@ -1,0 +1,442 @@
+/* ── Reset e base ─────────────────────────────────────────────── */
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: 'Segoe UI', Arial, sans-serif;
+  background: #1a1a2e;
+  color: #fff;
+  min-height: 100vh;
+}
+
+.app {
+  max-width: 700px;
+  margin: 0 auto;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+}
+
+/* ── Cabeçalho ────────────────────────────────────────────────── */
+.cabecalho {
+  width: 100%;
+  background: linear-gradient(135deg, #16213e, #0f3460);
+  border-radius: 16px;
+  padding: 14px 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border: 2px solid #e94560;
+  box-shadow: 0 4px 20px rgba(233, 69, 96, 0.3);
+}
+
+.cabecalho-titulo {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.cabecalho-titulo h1 {
+  font-size: 1.4rem;
+  font-weight: 900;
+  letter-spacing: 2px;
+  color: #fbbf24;
+  text-shadow: 0 0 10px rgba(251, 191, 36, 0.5);
+}
+
+.cabecalho-titulo p {
+  font-size: 0.75rem;
+  color: #94a3b8;
+}
+
+.icone-comboio {
+  font-size: 1.8rem;
+}
+
+.pontuacao {
+  font-size: 1.1rem;
+  font-weight: bold;
+  color: #fbbf24;
+  background: rgba(251, 191, 36, 0.15);
+  padding: 6px 14px;
+  border-radius: 20px;
+  border: 1px solid rgba(251, 191, 36, 0.4);
+}
+
+/* ── Dica ─────────────────────────────────────────────────────── */
+.dica {
+  width: 100%;
+  background: #16213e;
+  border-radius: 10px;
+  padding: 10px 16px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.9rem;
+  color: #cbd5e1;
+  border: 1px solid #334155;
+}
+
+.tentativas-restantes {
+  font-weight: bold;
+  color: #fbbf24;
+}
+
+/* ── Grelha de jogo ───────────────────────────────────────────── */
+.grelha {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.linha {
+  display: flex;
+  gap: 6px;
+}
+
+.celula {
+  width: 60px;
+  height: 60px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.6rem;
+  font-weight: 900;
+  letter-spacing: 1px;
+  border-radius: 10px;
+  border: 2px solid #334155;
+  background: #16213e;
+  color: #fff;
+  transition: all 0.3s ease;
+}
+
+.celula.preenchida {
+  border-color: #64748b;
+  background: #1e293b;
+  animation: bounce 0.1s ease;
+}
+
+.celula.vazia {
+  border-color: #1e293b;
+  background: #0f172a;
+}
+
+.celula.correto {
+  background: #166534;
+  border-color: #4ade80;
+  color: #fff;
+  animation: flip 0.4s ease;
+}
+
+.celula.presente {
+  background: #854d0e;
+  border-color: #fbbf24;
+  color: #fff;
+  animation: flip 0.4s ease;
+}
+
+.celula.errado {
+  background: #1e293b;
+  border-color: #334155;
+  color: #64748b;
+  animation: flip 0.4s ease;
+}
+
+@keyframes bounce {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.1); }
+}
+
+@keyframes flip {
+  0% { transform: rotateX(0deg); }
+  50% { transform: rotateX(90deg); }
+  100% { transform: rotateX(0deg); }
+}
+
+/* ── Mensagem de estado ───────────────────────────────────────── */
+.mensagem {
+  font-size: 1.1rem;
+  font-weight: bold;
+  padding: 10px 24px;
+  border-radius: 30px;
+  background: #1e293b;
+  border: 1px solid #334155;
+  color: #fbbf24;
+  text-align: center;
+  animation: fadeIn 0.3s ease;
+}
+
+.mensagem.ganhou {
+  background: #14532d;
+  border-color: #4ade80;
+  color: #4ade80;
+}
+
+.mensagem.perdeu {
+  background: #450a0a;
+  border-color: #ef4444;
+  color: #ef4444;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(-10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ── Legenda ──────────────────────────────────────────────────── */
+.legenda {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: center;
+  font-size: 0.75rem;
+  color: #94a3b8;
+}
+
+/* ── Teclado gestual ──────────────────────────────────────────── */
+.teclado-area {
+  width: 100%;
+  background: #16213e;
+  border-radius: 16px;
+  padding: 14px;
+  border: 1px solid #334155;
+}
+
+.teclado-titulo {
+  text-align: center;
+  font-size: 0.95rem;
+  color: #94a3b8;
+  margin-bottom: 12px;
+  font-weight: 500;
+}
+
+.teclado-gestual {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(58px, 1fr));
+  gap: 6px;
+}
+
+.gesto-btn {
+  background: #0f172a;
+  border: 2px solid #334155;
+  border-radius: 10px;
+  padding: 6px 4px 4px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.gesto-btn:hover:not(:disabled) {
+  border-color: #fbbf24;
+  background: #1e293b;
+  transform: scale(1.05);
+  box-shadow: 0 0 10px rgba(251, 191, 36, 0.3);
+}
+
+.gesto-btn:active:not(:disabled) {
+  transform: scale(0.95);
+}
+
+.gesto-btn.correto {
+  border-color: #4ade80;
+  background: #14532d;
+  opacity: 0.7;
+}
+
+.gesto-btn.presente {
+  border-color: #fbbf24;
+  background: #451a03;
+}
+
+.gesto-btn.errado {
+  border-color: #1e293b;
+  background: #0a0f1a;
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.gesto-svg {
+  width: 52px;
+  height: 52px;
+  pointer-events: none;
+}
+
+.gesto-svg svg {
+  width: 100%;
+  height: 100%;
+}
+
+/* ── Botões de ação ───────────────────────────────────────────── */
+.botoes-acao {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 14px;
+  gap: 8px;
+}
+
+.btn-apagar,
+.btn-confirmar {
+  padding: 10px 18px;
+  border-radius: 10px;
+  font-size: 0.9rem;
+  font-weight: bold;
+  cursor: pointer;
+  border: 2px solid;
+  transition: all 0.2s;
+}
+
+.btn-apagar {
+  background: #1e293b;
+  border-color: #ef4444;
+  color: #ef4444;
+}
+
+.btn-apagar:hover {
+  background: #ef4444;
+  color: #fff;
+}
+
+.btn-confirmar {
+  background: #1e293b;
+  border-color: #4ade80;
+  color: #4ade80;
+}
+
+.btn-confirmar:hover {
+  background: #4ade80;
+  color: #000;
+}
+
+.palavra-atual {
+  display: flex;
+  gap: 6px;
+}
+
+.letra-atual {
+  width: 36px;
+  height: 36px;
+  background: #0f3460;
+  border: 2px solid #fbbf24;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.2rem;
+  font-weight: bold;
+  color: #fbbf24;
+}
+
+.letra-vazia {
+  width: 36px;
+  height: 36px;
+  background: #0f172a;
+  border: 2px dashed #334155;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.2rem;
+  color: #334155;
+}
+
+/* ── Ecrã de fim de jogo ──────────────────────────────────────── */
+.fim-jogo {
+  width: 100%;
+  text-align: center;
+  padding: 24px;
+  border-radius: 16px;
+  border: 2px solid;
+  animation: fadeIn 0.5s ease;
+}
+
+.fim-jogo.ganhou {
+  background: #14532d;
+  border-color: #4ade80;
+}
+
+.fim-jogo.perdeu {
+  background: #450a0a;
+  border-color: #ef4444;
+}
+
+.fim-emoji {
+  font-size: 2.5rem;
+  margin-bottom: 10px;
+}
+
+.fim-jogo h2 {
+  font-size: 1.6rem;
+  margin-bottom: 8px;
+}
+
+.fim-jogo p {
+  font-size: 1rem;
+  color: #cbd5e1;
+  margin-bottom: 6px;
+}
+
+.palavra-revelada {
+  font-size: 1.4rem !important;
+  color: #fbbf24 !important;
+  letter-spacing: 4px;
+  margin: 10px 0 !important;
+}
+
+.btn-novo-jogo {
+  margin: 14px auto 0;
+  display: block;
+  padding: 12px 28px;
+  background: #fbbf24;
+  color: #000;
+  border: none;
+  border-radius: 12px;
+  font-size: 1.1rem;
+  font-weight: bold;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-novo-jogo:hover {
+  background: #f59e0b;
+  transform: scale(1.05);
+}
+
+.pontuacao-total {
+  margin-top: 12px;
+  font-size: 0.9rem;
+  color: #94a3b8;
+}
+
+/* ── Responsivo mobile ────────────────────────────────────────── */
+@media (max-width: 480px) {
+  .celula {
+    width: 50px;
+    height: 50px;
+    font-size: 1.3rem;
+  }
+
+  .teclado-gestual {
+    grid-template-columns: repeat(auto-fill, minmax(50px, 1fr));
+  }
+
+  .gesto-svg {
+    width: 44px;
+    height: 44px;
+  }
+
+  .cabecalho-titulo h1 {
+    font-size: 1.1rem;
+  }
+
+  .botoes-acao {
+    flex-direction: column;
+  }
+}
