@@ -48,6 +48,269 @@ const LGP_DESCRICAO = {
   Z: "Indicador traça Z no ar",
 };
 
+
+// Componente SVG que desenha a mão para cada letra do alfabeto gestual
+function HandSVG({ letra }) {
+  const skin = "#f5c89a";
+  const dark = "#d4956a";
+  const nail = "#fde8d8";
+
+  // Palma base comum
+  const Palma = ({cx=100,cy=170,w=80,h=60}) => (
+    <ellipse cx={cx} cy={cy} rx={w/2} ry={h/2} fill={skin} stroke={dark} strokeWidth="2"/>
+  );
+
+  // Dedo genérico
+  const Dedo = ({x,y,w=18,h=50,rx=9,fill=skin}) => (
+    <g>
+      <rect x={x-w/2} y={y-h} width={w} height={h+10} rx={rx} fill={fill} stroke={dark} strokeWidth="1.5"/>
+      <ellipse cx={x} cy={y-h+8} rx={w/2-2} ry={6} fill={nail} opacity="0.6"/>
+    </g>
+  );
+
+  // Dedo dobrado (apenas a base visível)
+  const DedoDobrado = ({x,y,w=18,h=20,rx=9}) => (
+    <rect x={x-w/2} y={y-h} width={w} height={h+10} rx={rx} fill={skin} stroke={dark} strokeWidth="1.5"/>
+  );
+
+  const gestos = {
+    A: ( // Punho fechado, polegar ao lado
+      <g>
+        <Palma/>
+        {[72,88,104,120].map((x,i)=><DedoDobrado key={i} x={x} y={150} h={25}/>)}
+        {/* polegar ao lado */}
+        <rect x={48} y={138} width={16} height={30} rx={8} fill={skin} stroke={dark} strokeWidth="1.5"/>
+      </g>
+    ),
+    B: ( // 4 dedos esticados, polegar dobrado
+      <g>
+        <Palma cy={175}/>
+        {[72,88,104,120].map((x,i)=><Dedo key={i} x={x} y={175} h={60}/>)}
+        <rect x={56} y={155} width={16} height={25} rx={8} fill={skin} stroke={dark} strokeWidth="1.5"/>
+      </g>
+    ),
+    C: ( // Mão em C
+      <g>
+        <path d="M140,120 Q170,100 170,160 Q170,210 140,220" fill="none" stroke={dark} strokeWidth="3"/>
+        <path d="M140,120 Q105,100 100,160 Q100,210 140,220" fill={skin} stroke={dark} strokeWidth="2"/>
+        <path d="M100,160 Q100,100 140,90 Q175,80 180,140" fill="none" stroke={skin} strokeWidth="18"/>
+        <path d="M100,160 Q100,215 140,225 Q175,230 180,190" fill="none" stroke={skin} strokeWidth="18"/>
+        {/* contorno C */}
+        <path d="M175,130 Q145,100 105,120 Q75,140 75,175 Q75,210 105,225 Q140,240 175,220"
+              fill="none" stroke={dark} strokeWidth="3"/>
+        <path d="M175,130 Q145,100 105,120 Q75,140 75,175 Q75,210 105,225 Q140,240 175,220"
+              fill={skin} stroke={dark} strokeWidth="2" opacity="0.9"/>
+      </g>
+    ),
+    D: ( // Indicador esticado, resto curvo tocando polegar
+      <g>
+        <Palma cy={175}/>
+        <Dedo x={88} y={175} h={65}/>
+        {[104,118].map((x,i)=><DedoDobrado key={i} x={x} y={155} h={20}/>)}
+        <DedoDobrado x={72} y={155} h={20}/>
+        {/* polegar toca dedos curvados */}
+        <ellipse cx={80} cy={162} rx={10} ry={8} fill={skin} stroke={dark} strokeWidth="1.5"/>
+      </g>
+    ),
+    E: ( // Todos os dedos dobrados, pontas na palma
+      <g>
+        <Palma cy={170}/>
+        {[72,88,104,120].map((x,i)=><DedoDobrado key={i} x={x} y={155} h={22}/>)}
+        <rect x={50} y={155} width={16} height={20} rx={8} fill={skin} stroke={dark} strokeWidth="1.5"/>
+      </g>
+    ),
+    F: ( // Polegar toca indicador, resto esticado
+      <g>
+        <Palma cy={175}/>
+        <DedoDobrado x={88} y={155} h={22}/>
+        {[104,120,136].map((x,i)=><Dedo key={i} x={x} y={175} h={55-i*3}/>)}
+        <ellipse cx={75} cy={158} rx={10} ry={9} fill={skin} stroke={dark} strokeWidth="1.5"/>
+      </g>
+    ),
+    G: ( // Polegar e indicador apontam para o lado
+      <g>
+        <Palma cy={175}/>
+        {[88,104,120].map((x,i)=><DedoDobrado key={i} x={x} y={158} h={22}/>)}
+        {/* indicador apontado lado */}
+        <rect x={115} y={148} width={50} height={16} rx={8} fill={skin} stroke={dark} strokeWidth="1.5"/>
+        <ellipse cx={116} cy={155} rx={9} ry={8} fill={nail} opacity="0.5"/>
+        {/* polegar */}
+        <rect x={110} y={162} width={40} height={14} rx={7} fill={skin} stroke={dark} strokeWidth="1.5"/>
+      </g>
+    ),
+    H: ( // Indicador e médio esticados horizontalmente
+      <g>
+        <Palma cy={175}/>
+        {[104,120].map((x,i)=><DedoDobrado key={i} x={x} y={158} h={22}/>)}
+        {/* indicador e médio deitados */}
+        <rect x={108} y={140} width={55} height={15} rx={7} fill={skin} stroke={dark} strokeWidth="1.5"/>
+        <rect x={108} y={156} width={55} height={15} rx={7} fill={skin} stroke={dark} strokeWidth="1.5"/>
+      </g>
+    ),
+    I: ( // Só o mindinho esticado
+      <g>
+        <Palma cy={175}/>
+        {[72,88,104].map((x,i)=><DedoDobrado key={i} x={x} y={158} h={22}/>)}
+        <Dedo x={120} y={175} h={55}/>
+        <rect x={50} y={158} width={16} height={22} rx={8} fill={skin} stroke={dark} strokeWidth="1.5"/>
+      </g>
+    ),
+    J: ( // Mindinho esticado + movimento J
+      <g>
+        <Palma cy={175}/>
+        {[72,88,104].map((x,i)=><DedoDobrado key={i} x={x} y={158} h={22}/>)}
+        <Dedo x={120} y={175} h={55}/>
+        <rect x={50} y={158} width={16} height={22} rx={8} fill={skin} stroke={dark} strokeWidth="1.5"/>
+        {/* seta J */}
+        <path d="M120,120 Q140,105 145,120 Q148,135 130,145" fill="none" stroke="#fbbf24" strokeWidth="2.5" strokeDasharray="4,2"/>
+        <polygon points="126,143 134,148 128,152" fill="#fbbf24"/>
+      </g>
+    ),
+    K: ( // Indicador esticado, médio dobrado, polegar no meio
+      <g>
+        <Palma cy={175}/>
+        <Dedo x={88} y={175} h={65}/>
+        <DedoDobrado x={104} y={158} h={28}/>
+        {[120,136].map((x,i)=><DedoDobrado key={i} x={x} y={155} h={22}/>)}
+        <rect x={95} y={158} width={16} height={16} rx={7} fill={skin} stroke={dark} strokeWidth="1.5"/>
+      </g>
+    ),
+    L: ( // Polegar e indicador em L
+      <g>
+        <Palma cy={175}/>
+        {[104,120,136].map((x,i)=><DedoDobrado key={i} x={x} y={158} h={22}/>)}
+        <Dedo x={88} y={175} h={65}/>
+        <rect x={50} y={152} width={35} height={15} rx={7} fill={skin} stroke={dark} strokeWidth="1.5"/>
+      </g>
+    ),
+    M: ( // 3 dedos dobrados sobre polegar
+      <g>
+        <Palma cy={172}/>
+        {[80,96,112].map((x,i)=><DedoDobrado key={i} x={x} y={162} h={28}/>)}
+        <DedoDobrado x={128} y={158} h={22}/>
+        <ellipse cx={96} cy={168} rx={20} ry={8} fill={skin} stroke={dark} strokeWidth="1.5"/>
+      </g>
+    ),
+    N: ( // 2 dedos dobrados sobre polegar
+      <g>
+        <Palma cy={172}/>
+        {[88,104].map((x,i)=><DedoDobrado key={i} x={x} y={162} h={28}/>)}
+        {[120,136].map((x,i)=><DedoDobrado key={i} x={x} y={158} h={22}/>)}
+        <ellipse cx={96} cy={168} rx={14} ry={8} fill={skin} stroke={dark} strokeWidth="1.5"/>
+      </g>
+    ),
+    O: ( // Todos os dedos formam O
+      <g>
+        <ellipse cx={100} cy={160} rx={38} ry={45} fill={skin} stroke={dark} strokeWidth="2"/>
+        <ellipse cx={100} cy={160} rx={20} ry={25} fill="#1e293b"/>
+        <ellipse cx={100} cy={160} rx={18} ry={23} fill="#1e293b"/>
+      </g>
+    ),
+    P: ( // Como K mas para baixo
+      <g>
+        <Palma cx={100} cy={130}/>
+        <Dedo x={88} y={130} h={55}/>
+        <DedoDobrado x={104} y={118} h={28}/>
+        {[120,136].map((x,i)=><DedoDobrado key={i} x={x} y={115} h={22}/>)}
+      </g>
+    ),
+    Q: ( // Como G mas para baixo
+      <g>
+        <Palma cx={100} cy={130}/>
+        {[80,96,112].map((x,i)=><DedoDobrado key={i} x={x} y={118} h={22}/>)}
+        <rect x={58} y={130} width={50} height={15} rx={7} fill={skin} stroke={dark} strokeWidth="1.5"/>
+        <rect x={58} y={145} width={40} height={13} rx={6} fill={skin} stroke={dark} strokeWidth="1.5"/>
+      </g>
+    ),
+    R: ( // Indicador e médio cruzados
+      <g>
+        <Palma cy={175}/>
+        {[120,136].map((x,i)=><DedoDobrado key={i} x={x} y={158} h={22}/>)}
+        <DedoDobrado x={72} y={158} h={22}/>
+        {/* dois dedos cruzados */}
+        <rect x={80} y={115} width={17} height={65} rx={8} fill={skin} stroke={dark} strokeWidth="1.5" transform="rotate(-8,88,148)"/>
+        <rect x={95} y={115} width={17} height={65} rx={8} fill={skin} stroke={dark} strokeWidth="1.5" transform="rotate(8,104,148)"/>
+      </g>
+    ),
+    S: ( // Punho fechado, polegar por cima
+      <g>
+        <Palma/>
+        {[72,88,104,120].map((x,i)=><DedoDobrado key={i} x={x} y={152} h={25}/>)}
+        <rect x={55} y={140} width={70} height={14} rx={7} fill={skin} stroke={dark} strokeWidth="1.5"/>
+      </g>
+    ),
+    T: ( // Polegar entre indicador e médio
+      <g>
+        <Palma/>
+        {[72,88,104,120].map((x,i)=><DedoDobrado key={i} x={x} y={152} h={25}/>)}
+        <ellipse cx={88} cy={150} rx={10} ry={9} fill={skin} stroke={dark} strokeWidth="1.5"/>
+      </g>
+    ),
+    U: ( // Indicador e médio juntos esticados
+      <g>
+        <Palma cy={175}/>
+        <Dedo x={88} y={175} h={65}/>
+        <Dedo x={104} y={175} h={65}/>
+        {[120,136].map((x,i)=><DedoDobrado key={i} x={x} y={158} h={22}/>)}
+        <rect x={50} y={158} width={16} height={22} rx={8} fill={skin} stroke={dark} strokeWidth="1.5"/>
+      </g>
+    ),
+    V: ( // Indicador e médio em V
+      <g>
+        <Palma cy={175}/>
+        {[120,136].map((x,i)=><DedoDobrado key={i} x={x} y={158} h={22}/>)}
+        <DedoDobrado x={72} y={158} h={22}/>
+        <Dedo x={88} y={175} h={65} fill={skin}/>
+        <Dedo x={110} y={175} h={65} fill={skin}/>
+      </g>
+    ),
+    W: ( // Indicador, médio e anelar esticados
+      <g>
+        <Palma cy={175}/>
+        <DedoDobrado x={136} y={158} h={22}/>
+        <DedoDobrado x={68} y={158} h={22}/>
+        {[84,100,116].map((x,i)=><Dedo key={i} x={x} y={175} h={60-i*3}/>)}
+      </g>
+    ),
+    X: ( // Indicador dobrado em gancho
+      <g>
+        <Palma cy={175}/>
+        {[104,120,136].map((x,i)=><DedoDobrado key={i} x={x} y={158} h={22}/>)}
+        <rect x={50} y={158} width={16} height={22} rx={8} fill={skin} stroke={dark} strokeWidth="1.5"/>
+        {/* gancho */}
+        <path d="M88,155 Q88,130 96,125 Q104,120 104,135 Q104,148 88,155" fill={skin} stroke={dark} strokeWidth="1.5"/>
+      </g>
+    ),
+    Y: ( // Polegar e mindinho esticados
+      <g>
+        <Palma cy={175}/>
+        {[88,104].map((x,i)=><DedoDobrado key={i} x={x} y={158} h={22}/>)}
+        <DedoDobrado x={72} y={158} h={22}/>
+        <Dedo x={120} y={175} h={55}/>
+        <rect x={44} y={152} width={35} height={14} rx={7} fill={skin} stroke={dark} strokeWidth="1.5"/>
+      </g>
+    ),
+    Z: ( // Indicador traça Z
+      <g>
+        <Palma cy={175}/>
+        {[104,120,136].map((x,i)=><DedoDobrado key={i} x={x} y={158} h={22}/>)}
+        <rect x={50} y={158} width={16} height={22} rx={8} fill={skin} stroke={dark} strokeWidth="1.5"/>
+        <Dedo x={88} y={175} h={65}/>
+        {/* seta Z */}
+        <path d="M75,118 L105,118 L75,138 L105,138" fill="none" stroke="#fbbf24" strokeWidth="2.5" strokeLinecap="round"/>
+        <polygon points="102,134 108,141 98,141" fill="#fbbf24"/>
+      </g>
+    ),
+  };
+
+  return (
+    <svg viewBox="0 0 200 260" width="120" height="120" style={{background:"#1e293b",borderRadius:8,padding:4}}>
+      <rect width="200" height="260" fill="#1e293b" rx="8"/>
+      {gestos[letra] || <text x="100" y="140" textAnchor="middle" fill="#fbbf24" fontSize="80" fontWeight="bold">{letra}</text>}
+    </svg>
+  );
+}
+
 const ALFABETO = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
 
 // Deteção de gestos baseada nos 21 pontos do HandPose
@@ -566,6 +829,7 @@ export default function App() {
         {letraManual && (
           <div className="manual-detalhe">
             <span className="manual-detalhe-letra">{letraManual}</span>
+            <HandSVG letra={letraManual} />
             <span className="manual-detalhe-desc">{LGP_DESCRICAO[letraManual]}</span>
           </div>
         )}

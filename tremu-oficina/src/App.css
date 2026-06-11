@@ -288,6 +288,7 @@ body {
 }
 .manual-detalhe-letra { font-size: 2.2rem; font-weight: 900; color: #fbbf24; min-width: 36px; }
 .manual-detalhe-desc  { font-size: .9rem; color: #cbd5e1; }
+.manual-detalhe-img   { width: 110px; height: 110px; object-fit: contain; border-radius: 8px; background: #1e293b; padding: 4px; }
 
 /* Mobile */
 @media (max-width: 560px) {
