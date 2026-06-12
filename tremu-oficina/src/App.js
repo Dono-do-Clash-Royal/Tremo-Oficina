@@ -447,27 +447,44 @@ function detetarLetra(lm) {
     if (dist2d(lm[8], lm[6]) / escala < 0.35 && cI > 0.5 && cM > 0.5)
       return { letra: 'X', conf: 82 };
 
-    // S: punho fechado, polegar POR CIMA dos dedos
-    if (dPolMed < 0.28 && cI > 0.5 && cM > 0.5 && cA > 0.5 && cMi > 0.5)
-      return { letra: 'S', conf: 83 };
+    // Verificações de posição do polegar para distinguir punhos fechados
+    // polegar está em cima (y da ponta próximo das articulações dos dedos)
+    const polgarEmCima = lm[4].y > lm[5].y && lm[4].y < lm[9].y;
+    // polegar está lateralmente (x da ponta claramente fora do punho)
+    const polgarAoLado = lm[4].x < lm[5].x - escala * 0.15;
+    // polegar entre indicador e médio horizontalmente
+    const polgarEntreIndMed = lm[4].x > Math.min(lm[5].x, lm[9].x) - escala * 0.05
+                           && lm[4].x < Math.max(lm[5].x, lm[9].x) + escala * 0.05;
 
-    // T: polegar entre indicador e médio
-    if (dPolInd < 0.35 && dPolMed < 0.45 && cI > 0.5 && cM > 0.5)
-      return { letra: 'T', conf: 80 };
+    // S: punho fechado, polegar POR CIMA (polegar cobre os dedos dobrados)
+    // Polegar em cima dos dedos, muito próximo do médio/anelar
+    if (polgarEmCima && dPolMed < 0.32 && cI > 0.5 && cM > 0.5 && cA > 0.5 && cMi > 0.5)
+      return { letra: 'S', conf: 86 };
 
-    // M: 3 dedos dobrados sobre o polegar (indicador+médio+anelar)
-    if (dPolMed < 0.40 && dPolAnel < 0.55 && cI > 0.4 && cM > 0.4 && cA > 0.4 && cMi > 0.5)
-      return { letra: 'M', conf: 80 };
+    // T: polegar espetado entre indicador e médio (parcialmente visível entre eles)
+    // O polegar está na posição horizontal entre ind e médio, ambos muito fechados
+    if (polgarEntreIndMed && dPolInd < 0.30 && dPolMed < 0.38
+        && cI > 0.55 && cM > 0.55 && cA > 0.5 && cMi > 0.5)
+      return { letra: 'T', conf: 83 };
 
-    // N: 2 dedos dobrados sobre o polegar (indicador+médio)
-    if (dPolInd < 0.38 && dPolMed < 0.40 && cI > 0.4 && cM > 0.4 && cA > 0.5 && cMi > 0.5)
-      return { letra: 'N', conf: 80 };
+    // N: indicador + médio dobrados sobre o polegar (2 dedos cobrem polegar)
+    // anelar e mindinho também fechados mas NÃO sobre o polegar
+    if (dPolInd < 0.35 && dPolMed < 0.38 && dPolAnel > 0.40
+        && cI > 0.45 && cM > 0.45 && cA > 0.5 && cMi > 0.5)
+      return { letra: 'N', conf: 82 };
 
-    // E: todos os dedos dobrados, pontas na palma
-    if (cI > 0.55 && cM > 0.55 && cA > 0.55 && cMi > 0.55 && dPolInd > 0.3)
-      return { letra: 'E', conf: 82 };
+    // M: indicador + médio + anelar dobrados sobre o polegar (3 dedos cobrem)
+    if (dPolInd < 0.38 && dPolMed < 0.42 && dPolAnel < 0.52
+        && cI > 0.45 && cM > 0.45 && cA > 0.45 && cMi > 0.5)
+      return { letra: 'M', conf: 82 };
 
-    // A: punho fechado, polegar ao lado (não em cima)
+    // E: todos os dedos dobrados para a palma, pontas na palma
+    // Curvatura alta em todos, polegar afastado lateralmente (não em cima)
+    if (cI > 0.58 && cM > 0.58 && cA > 0.58 && cMi > 0.58 && dPolInd > 0.32 && !polgarEmCima)
+      return { letra: 'E', conf: 84 };
+
+    // A: punho fechado, polegar ao lado (não em cima, não entre dedos)
+    // Condição de fallback para punho com polegar lateral
     if (cI > 0.5 && cM > 0.5 && cA > 0.5 && cMi > 0.5)
       return { letra: 'A', conf: 83 };
   }
