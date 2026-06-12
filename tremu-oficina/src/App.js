@@ -1,8 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import './App.css';
-import '@tensorflow/tfjs-core';
-import '@tensorflow/tfjs-backend-webgl';
-import * as hpd from '@tensorflow-models/hand-pose-detection';
 
 const PALAVRAS = [
   { palavra: "RODA", dica: "🔧 Parte circular do carro" },
@@ -325,6 +322,9 @@ function dist2d(a, b) {
   return Math.sqrt((a.x-b.x)**2 + (a.y-b.y)**2);
 }
 
+// Com MediaPipe as coords são normalizadas 0..1, escala típica da mão ~0.3
+// Ajustamos a função de extensão para esse espaço
+
 // Retorna valor 0..1 de quão dobrado está o dedo (0=esticado, 1=fechado)
 function curvaturaDedo(lm, ponta, media, base, mcp) {
   const dPonta = dist2d(lm[ponta], lm[0]);
@@ -361,94 +361,116 @@ function detetarLetra(lm) {
   const escala = dist2d(pulso, lm[17]) || 0.1;
 
   // Distâncias úteis (normalizadas pela escala da mão)
-  const dPolInd = dist2d(lm[4], lm[8])  / escala; // polegar-indicador
-  const dPolMed = dist2d(lm[4], lm[12]) / escala; // polegar-médio
-  const sepIndMed = dist2d(lm[8], lm[12]) / escala; // separação indicador-médio
+  const dPolInd  = dist2d(lm[4], lm[8])  / escala; // polegar-indicador
+  const dPolMed  = dist2d(lm[4], lm[12]) / escala; // polegar-médio
+  const dPolAnel = dist2d(lm[4], lm[16]) / escala; // polegar-anelar
+  const dPolMind = dist2d(lm[4], lm[20]) / escala; // polegar-mindinho
+  const sepIndMed  = dist2d(lm[8],  lm[12]) / escala;
+  const sepMedAnel = dist2d(lm[12], lm[16]) / escala;
 
   // Curvatura de cada dedo (0=esticado, 1=fechado)
+  const cP  = curvaturaDedo(lm, 4,  3,  2,  1);
   const cI  = curvaturaDedo(lm, 8,  7,  6,  5);
   const cM  = curvaturaDedo(lm, 12, 11, 10, 9);
   const cA  = curvaturaDedo(lm, 16, 15, 14, 13);
   const cMi = curvaturaDedo(lm, 20, 19, 18, 17);
 
-  // Mão totalmente relaxada/neutra — não detetar nada
-  // (todos os dedos semi-esticados sem padrão claro)
-  if (nExt >= 3 && P && I && M) return { letra: null, conf: 0 };
+  // Direção do indicador (para cima = positivo)
+  const dyInd  = (lm[6].y - lm[8].y)  / escala;
+  const dyMed  = (lm[10].y - lm[12].y) / escala;
+  const dxInd  = (lm[8].x  - lm[6].x)  / escala;
 
-  // ── PADRÕES POR Nº DE DEDOS ESTENDIDOS ───────────────────────
+  // ── 5 DEDOS ──────────────────────────────────────────────────
+  // B: 4 dedos esticados, polegar dobrado encostado à palma
+  if (!P && I && M && A && Mi && cP > 0.4)
+    return { letra: 'B', conf: 90 };
 
-  // 4 dedos + sem polegar = B
-  if (!P && I && M && A && Mi)    return { letra: 'B', conf: 90 };
+  // ── 4 DEDOS ──────────────────────────────────────────────────
+  // W: indicador + médio + anelar (sem polegar e sem mindinho)
+  if (!P && I && M && A && !Mi && cMi > 0.4)
+    return { letra: 'W', conf: 87 };
+
+  // ── 3 DEDOS ──────────────────────────────────────────────────
+  // Polegar + indicador + médio
+  if (P && I && M && !A && !Mi && cA > 0.4 && cMi > 0.4) {
+    if (dyInd > 0.2) return { letra: 'K', conf: 83 };
+    return { letra: 'P', conf: 80 };
+  }
+
+  // Indicador + médio + anelar
+  if (!P && I && M && A && !Mi)
+    return { letra: 'W', conf: 85 };
+
+  // ── 2 DEDOS ──────────────────────────────────────────────────
+  // Polegar + indicador = L ou G
+  if (P && I && !M && !A && !Mi && cM > 0.4 && cA > 0.4 && cMi > 0.4) {
+    if (dyInd > 0.2) return { letra: 'L', conf: 88 };
+    return { letra: 'G', conf: 82 };
+  }
 
   // Polegar + mindinho = Y
-  if (P && !I && !M && !A && Mi)  return { letra: 'Y', conf: 90 };
-
-  // Só mindinho = I
-  if (!P && !I && !M && !A && Mi) return { letra: 'I', conf: 90 };
-
-  // Só indicador = D
-  if (!P && I && !M && !A && !Mi) {
-    // Confirma que os outros estão mesmo dobrados
-    if (cM > 0.4 && cA > 0.4) return { letra: 'D', conf: 88 };
-  }
-
-  // Indicador + médio + anelar = W
-  if (!P && I && M && A && !Mi)   return { letra: 'W', conf: 87 };
-
-  // Polegar + indicador = L ou G
-  if (P && I && !M && !A && !Mi) {
-    if (cM > 0.4 && cA > 0.4 && cMi > 0.4) { // outros dobrados
-      const dyInd = (lm[5].y - lm[8].y) / escala;
-      if (dyInd > 0.25) return { letra: 'L', conf: 88 };
-      return { letra: 'G', conf: 82 };
-    }
-  }
+  if (P && !I && !M && !A && Mi && cI > 0.4 && cM > 0.4 && cA > 0.4)
+    return { letra: 'Y', conf: 90 };
 
   // Indicador + médio = V, U ou R
-  if (!P && I && M && !A && !Mi) {
-    if (cA > 0.4 && cMi > 0.4) { // outros dobrados
-      if (sepIndMed > 0.35)  return { letra: 'V', conf: 88 };
-      if (lm[8].x < lm[12].x - 0.01) return { letra: 'R', conf: 84 };
-      return { letra: 'U', conf: 84 };
-    }
+  if (!P && I && M && !A && !Mi && cA > 0.4 && cMi > 0.4) {
+    if (sepIndMed > 0.35)                      return { letra: 'V', conf: 88 };
+    // R: indicador cruza por cima do médio
+    if (lm[8].x > lm[12].x + escala * 0.05)   return { letra: 'R', conf: 84 };
+    return { letra: 'U', conf: 84 };
   }
 
-  // Polegar + indicador + médio = K ou P
-  if (P && I && M && !A && !Mi) {
-    if (cA > 0.4 && cMi > 0.4) {
-      const dyInd = (lm[5].y - lm[8].y) / escala;
-      if (dyInd > 0.2) return { letra: 'K', conf: 82 };
-      return { letra: 'P', conf: 80 };
-    }
+  // ── 1 DEDO ───────────────────────────────────────────────────
+  // Só indicador = D
+  if (!P && I && !M && !A && !Mi && cM > 0.4 && cA > 0.4 && cMi > 0.4)
+    return { letra: 'D', conf: 88 };
+
+  // Só mindinho = I
+  if (!P && !I && !M && !A && Mi && cI > 0.4 && cM > 0.4 && cA > 0.4)
+    return { letra: 'I', conf: 90 };
+
+  // ── 0 DEDOS — PUNHO / CURVATURAS ESPECIAIS ───────────────────
+  if (nExt === 0 || (nExt === 1 && P)) {
+    // O: todos curvados, polegar-indicador muito próximos (circulo)
+    if (dPolInd < 0.28 && cI > 0.3 && cM > 0.3 && cA > 0.3)
+      return { letra: 'O', conf: 90 };
+
+    // F: polegar toca indicador, restantes mais soltos
+    if (dPolInd < 0.32 && cI > 0.4 && cM < 0.5 && cA < 0.5 && cMi < 0.5)
+      return { letra: 'F', conf: 85 };
+
+    // C: forma de C — dedos semi-curvados, polegar afastado
+    if (dPolInd > 0.30 && dPolInd < 0.70 && cI < 0.75 && cM < 0.75)
+      return { letra: 'C', conf: 84 };
+
+    // X: indicador dobrado em gancho (ponta próxima do médio)
+    if (dist2d(lm[8], lm[6]) / escala < 0.35 && cI > 0.5 && cM > 0.5)
+      return { letra: 'X', conf: 82 };
+
+    // S: punho fechado, polegar POR CIMA dos dedos
+    if (dPolMed < 0.28 && cI > 0.5 && cM > 0.5 && cA > 0.5 && cMi > 0.5)
+      return { letra: 'S', conf: 83 };
+
+    // T: polegar entre indicador e médio
+    if (dPolInd < 0.35 && dPolMed < 0.45 && cI > 0.5 && cM > 0.5)
+      return { letra: 'T', conf: 80 };
+
+    // M: 3 dedos dobrados sobre o polegar (indicador+médio+anelar)
+    if (dPolMed < 0.40 && dPolAnel < 0.55 && cI > 0.4 && cM > 0.4 && cA > 0.4 && cMi > 0.5)
+      return { letra: 'M', conf: 80 };
+
+    // N: 2 dedos dobrados sobre o polegar (indicador+médio)
+    if (dPolInd < 0.38 && dPolMed < 0.40 && cI > 0.4 && cM > 0.4 && cA > 0.5 && cMi > 0.5)
+      return { letra: 'N', conf: 80 };
+
+    // E: todos os dedos dobrados, pontas na palma
+    if (cI > 0.55 && cM > 0.55 && cA > 0.55 && cMi > 0.55 && dPolInd > 0.3)
+      return { letra: 'E', conf: 82 };
+
+    // A: punho fechado, polegar ao lado (não em cima)
+    if (cI > 0.5 && cM > 0.5 && cA > 0.5 && cMi > 0.5)
+      return { letra: 'A', conf: 83 };
   }
-
-  // ── PADRÕES COM DEDOS DOBRADOS ────────────────────────────────
-
-  // F: polegar toca indicador, médio+anelar+mindinho esticados
-  if (!P && !I && M && A && Mi) {
-    if (dPolInd < 0.3) return { letra: 'F', conf: 88 };
-  }
-
-  // O: todos curvados, polegar toca indicador (circulo fechado)
-  if (!P && !I && !M && !A && !Mi) {
-    if (dPolInd < 0.3 && cI > 0.3 && cM > 0.3) return { letra: 'O', conf: 90 };
-  }
-
-  // C: dedos semi-curvados, polegar afastado formando C
-  // Requer que NENHUM dedo esteja esticado e que polegar-indicador tenha distância média
-  if (nExt === 0 && dPolInd > 0.3 && dPolInd < 0.65) {
-    if (cI < 0.8 && cM < 0.8) return { letra: 'C', conf: 84 };
-  }
-
-  // A: punho fechado, polegar ao lado
-  if (nExt === 0) {
-    if (dPolInd > 0.2 && cI > 0.5 && cM > 0.5 && cA > 0.5) {
-      return { letra: 'A', conf: 86 };
-    }
-  }
-
-  // S: punho fechado, polegar por cima dos dedos (ponta polegar perto do médio)
-  if (nExt === 0 && dPolMed < 0.25) return { letra: 'S', conf: 82 };
 
   return { letra: null, conf: 0 };
 }
@@ -561,24 +583,94 @@ export default function App() {
       videoRef.current.srcObject = s;
       await videoRef.current.play();
       setCamAtiva(true);
-      mostrarMsg('⏳ A carregar modelo de deteção...', '', 0);
+      mostrarMsg('⏳ A carregar modelo MediaPipe...', '', 0);
 
-      const tf = await import('@tensorflow/tfjs-core');
-      try {
-        await tf.setBackend('webgl');
-      } catch {
-        await tf.setBackend('cpu');
-      }
-      await tf.ready();
-      detectorRef.current = await hpd.createDetector(
-        hpd.SupportedModels.MediaPipeHands,
-        { runtime: 'tfjs', modelType: 'lite', maxHands: 1 }
-      );
+      // Carregar MediaPipe Hands via CDN
+      await new Promise((resolve, reject) => {
+        if (window.Hands) { resolve(); return; }
+        const script = document.createElement('script');
+        script.src = 'https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js';
+        script.crossOrigin = 'anonymous';
+        script.onload = resolve;
+        script.onerror = reject;
+        document.head.appendChild(script);
+      });
+
+      const hands = new window.Hands({
+        locateFile: (file) =>
+          `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`
+      });
+      hands.setOptions({
+        maxNumHands: 1,
+        modelComplexity: 1,
+        minDetectionConfidence: 0.7,
+        minTrackingConfidence: 0.7,
+      });
+
+      hands.onResults((results) => {
+        const canvas = canvasRef.current;
+        if (!canvas) return;
+        const ctx = canvas.getContext('2d');
+        canvas.width  = results.image.width  || 640;
+        canvas.height = results.image.height || 480;
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        setDebugInfo('maos:' + (results.multiHandLandmarks?.length || 0) +
+          ' res:' + canvas.width + 'x' + canvas.height);
+
+        if (results.multiHandLandmarks && results.multiHandLandmarks.length > 0) {
+          const lmNorm = results.multiHandLandmarks[0];
+
+          // Converter coordenadas normalizadas para pixels para desenhar
+          const kpPx = lmNorm.map(p => ({
+            x: p.x * canvas.width,
+            y: p.y * canvas.height,
+            z: p.z
+          }));
+          desenharMao(ctx, kpPx);
+
+          // detetarLetra usa coordenadas normalizadas (0..1)
+          const { letra, conf } = detetarLetra(lmNorm);
+          setLetraCam(letra);
+          setConfianca(conf);
+
+          if (letra && conf >= 55) {
+            setLetraManual(letra);
+            if (letra !== letraRef.current) {
+              letraRef.current = letra;
+              iniciarContagem(letra);
+            }
+          } else {
+            if (!letra) resetContagem();
+          }
+        } else {
+          setLetraCam(null);
+          setConfianca(0);
+          resetContagem();
+        }
+      });
+
+      detectorRef.current = hands;
+
+      // Loop de envio de frames ao MediaPipe
+      const loop = async () => {
+        const video = videoRef.current;
+        if (!video || !detectorRef.current) return;
+        if (video.readyState >= 2) {
+          try {
+            await detectorRef.current.send({ image: video });
+          } catch (e) {
+            setDebugInfo('ERRO: ' + e.message);
+          }
+        }
+        animRef.current = requestAnimationFrame(loop);
+      };
+      animRef.current = requestAnimationFrame(loop);
+
       setModeloOk(true);
       mostrarMsg('✅ Câmara pronta! Faz um gesto!', 'ok', 2500);
-      iniciarLoop();
     } catch (e) {
-      mostrarMsg('❌ Sem acesso à câmara: ' + e.message, 'erro', 4000);
+      mostrarMsg('❌ Erro: ' + e.message, 'erro', 4000);
     }
   }, [mostrarMsg]);
 
@@ -602,7 +694,7 @@ export default function App() {
 
   function iniciarContagem(letra) {
     clearInterval(contTimerRef.current);
-    contSecsRef.current = 10;
+    contSecsRef.current = 3;
     setContagem(3);
     contTimerRef.current = setInterval(() => {
       contSecsRef.current -= 1;
@@ -623,55 +715,6 @@ export default function App() {
       }
     }, 1000);
   }
-
-  const iniciarLoop = useCallback(() => {
-    const loop = async () => {
-      const video  = videoRef.current;
-      const canvas = canvasRef.current;
-      if (!video || !canvas || !detectorRef.current) return;
-      const ctx = canvas.getContext('2d');
-      canvas.width  = video.videoWidth  || 640;
-      canvas.height = video.videoHeight || 480;
-
-      if (video.readyState >= 2) {
-        try {
-          const maos = await detectorRef.current.estimateHands(video);
-          ctx.clearRect(0, 0, canvas.width, canvas.height);
-          setDebugInfo('maos:' + maos.length + ' res:' + video.videoWidth + 'x' + video.videoHeight);
-
-          if (maos.length > 0) {
-            const kp  = maos[0].keypoints;
-            const kp3 = maos[0].keypoints3D || kp.map(k => ({ ...k, z: 0 }));
-
-            // Desenhar esqueleto da mão
-            desenharMao(ctx, kp);
-
-            const { letra, conf } = detetarLetra(kp3);
-            console.log('🖐️ mão detetada | letra:', letra, '| conf:', conf, '| kp3[0]:', kp3[0]);
-            setLetraCam(letra);
-            setConfianca(conf);
-
-            if (letra && conf >= 55) {
-              setLetraManual(letra);
-              if (letra !== letraRef.current) {
-                letraRef.current = letra;
-                iniciarContagem(letra);
-              }
-            } else {
-              if (!letra) resetContagem();
-            }
-          } else {
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            setLetraCam(null);
-            setConfianca(0);
-            resetContagem();
-          }
-        } catch (e) { setDebugInfo('ERRO: ' + e.message); }
-      }
-      animRef.current = requestAnimationFrame(loop);
-    };
-    animRef.current = requestAnimationFrame(loop);
-  }, [estadoJogo, mostrarMsg]);
 
   function desenharMao(ctx, kp) {
     const conexoes = [
@@ -798,7 +841,7 @@ export default function App() {
                 </div>
               )}
               {contagem === null && letraCam && (
-                <div className="contagem-dica">Mantém o gesto 10 segundos</div>
+                <div className="contagem-dica">Mantém o gesto 3 segundos</div>
               )}
 
               {/* Palavra a construir */}
