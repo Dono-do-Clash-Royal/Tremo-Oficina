@@ -2,7 +2,7 @@
 mkdir tremu-na-oficina
 cd tremu-na-oficina
 
-cd Tremo-Oficina-main/tremu-oficina
+cd tremu-oficina
 npm install
 npm start
 

@@ -18,259 +18,975 @@ const PALAVRAS = [
   { palavra: "CHAO", dica: "🏭 Piso da oficina" },
 ];
 
+// Descrições dos gestos LGP para o manual
 const LGP_DESCRICAO = {
   A: "Punho fechado, polegar ao lado",
-  B: "4 dedos esticados, polegar dobrado",
+  B: "4 dedos juntos esticados para cima, polegar dobrado",
   C: "Mão curvada em forma de C",
-  D: "Indicador esticado, resto toca polegar",
-  E: "Dedos dobrados, pontas na palma",
-  F: "Polegar toca indicador (ok)",
-  G: "Polegar e indicador para o lado",
-  H: "Indicador e médio horizontais",
-  I: "Só mindinho esticado",
-  J: "Mindinho faz movimento J",
-  K: "Indicador esticado, médio dobrado",
+  D: "Indicador esticado, restantes curvados a tocar o polegar",
+  E: "Todos os dedos dobrados, pontas na palma",
+  F: "Polegar toca indicador (ok), restantes esticados",
+  G: "Polegar e indicador apontam para o lado",
+  H: "Indicador e médio esticados horizontalmente",
+  I: "Só o mindinho esticado",
+  J: "Mindinho esticado, faz movimento de J",
+  K: "Indicador esticado, médio dobrado, polegar no meio",
   L: "Polegar e indicador fazem L",
-  M: "3 dedos sobre o polegar",
-  N: "2 dedos sobre o polegar",
-  O: "Todos os dedos formam um O",
-  P: "Como K mas para baixo",
-  Q: "Como G mas para baixo",
+  M: "3 dedos dobrados sobre o polegar",
+  N: "2 dedos dobrados sobre o polegar",
+  O: "Todos os dedos formam um O com o polegar",
+  P: "Como K mas apontado para baixo",
+  Q: "Como G mas apontado para baixo",
   R: "Indicador e médio cruzados",
-  S: "Punho, polegar por cima",
-  T: "Polegar entre indicador e médio",
-  U: "Indicador e médio juntos",
-  V: "Indicador e médio em V",
-  W: "I, M e A esticados",
-  X: "Indicador em gancho",
+  S: "Punho fechado, polegar por cima dos dedos",
+  T: "Polegar entre indicador e médio (punho)",
+  U: "Indicador e médio juntos esticados",
+  V: "Indicador e médio esticados em V",
+  W: "Indicador, médio e anelar esticados em W",
+  X: "Indicador dobrado em gancho",
   Y: "Polegar e mindinho esticados",
-  Z: "Indicador traça Z",
+  Z: "Indicador traça Z no ar",
 };
 
+
+// Componente que mostra o cartão colorido LGP para cada letra
 function HandSVG({ letra }) {
-  const skin = "#f5c89a"; const dark = "#d4956a"; const nail = "#fde8d8";
-  const Palma = ({cx=100,cy=170,w=80,h=60}) => (<ellipse cx={cx} cy={cy} rx={w/2} ry={h/2} fill={skin} stroke={dark} strokeWidth="2"/>);
-  const Dedo = ({x,y,w=18,h=50,rx=9,fill=skin}) => (<g><rect x={x-w/2} y={y-h} width={w} height={h+10} rx={rx} fill={fill} stroke={dark} strokeWidth="1.5"/><ellipse cx={x} cy={y-h+8} rx={w/2-2} ry={6} fill={nail} opacity="0.6"/></g>);
-  const DedoDobrado = ({x,y,w=18,h=20,rx=9}) => (<rect x={x-w/2} y={y-h} width={w} height={h+10} rx={rx} fill={skin} stroke={dark} strokeWidth="1.5"/>);
+  const [erro, setErro] = React.useState(false);
+  if (!erro) {
+    return (
+      <img
+        src={`${process.env.PUBLIC_URL}/asl/${letra.toLowerCase()}.png`}
+        alt={`Gesto LGP letra ${letra}`}
+        onError={() => setErro(true)}
+        style={{
+          width: 120,
+          height: 160,
+          objectFit: 'cover',
+          borderRadius: 10,
+          display: 'block',
+          boxShadow: '0 4px 16px #0008',
+        }}
+      />
+    );
+  }
+  return (
+    <svg viewBox="0 0 120 160" width="120" height="160" style={{borderRadius:10}}>
+      <rect width="120" height="160" fill="#1e293b" rx="10"/>
+      <text x="60" y="100" textAnchor="middle" fill="#fbbf24" fontSize="80" fontWeight="bold">{letra}</text>
+    </svg>
+  );
+}
+
+// ── HandSVG legacy (SVG desenhado à mão — não utilizado) ────────────
+function HandSVGLegacy({ letra }) {
+  const skin = "#f5c89a";
+  const dark = "#d4956a";
+  const nail = "#fde8d8";
+
+  // Palma base comum
+  const Palma = ({cx=100,cy=170,w=80,h=60}) => (
+    <ellipse cx={cx} cy={cy} rx={w/2} ry={h/2} fill={skin} stroke={dark} strokeWidth="2"/>
+  );
+
+  // Dedo genérico
+  const Dedo = ({x,y,w=18,h=50,rx=9,fill=skin}) => (
+    <g>
+      <rect x={x-w/2} y={y-h} width={w} height={h+10} rx={rx} fill={fill} stroke={dark} strokeWidth="1.5"/>
+      <ellipse cx={x} cy={y-h+8} rx={w/2-2} ry={6} fill={nail} opacity="0.6"/>
+    </g>
+  );
+
+  // Dedo dobrado (apenas a base visível)
+  const DedoDobrado = ({x,y,w=18,h=20,rx=9}) => (
+    <rect x={x-w/2} y={y-h} width={w} height={h+10} rx={rx} fill={skin} stroke={dark} strokeWidth="1.5"/>
+  );
+
   const gestos = {
-    A: (<g><Palma/>{[72,88,104,120].map((x,i)=><DedoDobrado key={i} x={x} y={150} h={25}/>)}<rect x={48} y={138} width={16} height={30} rx={8} fill={skin} stroke={dark} strokeWidth="1.5"/></g>),
-    B: (<g><Palma cy={175}/>{[72,88,104,120].map((x,i)=><Dedo key={i} x={x} y={175} h={60}/>)}<rect x={56} y={155} width={16} height={25} rx={8} fill={skin} stroke={dark} strokeWidth="1.5"/></g>),
-    C: (<g><path d="M175,130 Q145,100 105,120 Q75,140 75,175 Q75,210 105,225 Q140,240 175,220" fill="none" stroke={dark} strokeWidth="3"/><path d="M175,130 Q145,100 105,120 Q75,140 75,175 Q75,210 105,225 Q140,240 175,220" fill={skin} stroke={dark} strokeWidth="2" opacity="0.9"/></g>),
-    D: (<g><Palma cy={175}/><Dedo x={88} y={175} h={65}/>{[104,118].map((x,i)=><DedoDobrado key={i} x={x} y={155} h={20}/>)}<DedoDobrado x={72} y={155} h={20}/><ellipse cx={80} cy={162} rx={10} ry={8} fill={skin} stroke={dark} strokeWidth="1.5"/></g>),
-    E: (<g><Palma cy={170}/>{[72,88,104,120].map((x,i)=><DedoDobrado key={i} x={x} y={155} h={22}/>)}<rect x={50} y={155} width={16} height={20} rx={8} fill={skin} stroke={dark} strokeWidth="1.5"/></g>),
-    F: (<g><Palma cy={175}/><DedoDobrado x={88} y={155} h={22}/>{[104,120,136].map((x,i)=><Dedo key={i} x={x} y={175} h={55-i*3}/>)}<ellipse cx={75} cy={158} rx={10} ry={9} fill={skin} stroke={dark} strokeWidth="1.5"/></g>),
-    G: (<g><Palma cy={175}/>{[88,104,120].map((x,i)=><DedoDobrado key={i} x={x} y={158} h={22}/>)}<rect x={115} y={148} width={50} height={16} rx={8} fill={skin} stroke={dark} strokeWidth="1.5"/><ellipse cx={116} cy={155} rx={9} ry={8} fill={nail} opacity="0.5"/><rect x={110} y={162} width={40} height={14} rx={7} fill={skin} stroke={dark} strokeWidth="1.5"/></g>),
-    H: (<g><Palma cy={175}/>{[104,120].map((x,i)=><DedoDobrado key={i} x={x} y={158} h={22}/>)}<rect x={108} y={140} width={55} height={15} rx={7} fill={skin} stroke={dark} strokeWidth="1.5"/><rect x={108} y={156} width={55} height={15} rx={7} fill={skin} stroke={dark} strokeWidth="1.5"/></g>),
-    I: (<g><Palma cy={175}/>{[72,88,104].map((x,i)=><DedoDobrado key={i} x={x} y={158} h={22}/>)}<Dedo x={120} y={175} h={55}/><rect x={50} y={158} width={16} height={22} rx={8} fill={skin} stroke={dark} strokeWidth="1.5"/></g>),
-    J: (<g><Palma cy={175}/>{[72,88,104].map((x,i)=><DedoDobrado key={i} x={x} y={158} h={22}/>)}<Dedo x={120} y={175} h={55}/><rect x={50} y={158} width={16} height={22} rx={8} fill={skin} stroke={dark} strokeWidth="1.5"/><path d="M120,120 Q140,105 145,120 Q148,135 130,145" fill="none" stroke="#fbbf24" strokeWidth="2.5" strokeDasharray="4,2"/><polygon points="126,143 134,148 128,152" fill="#fbbf24"/></g>),
-    K: (<g><Palma cy={175}/><Dedo x={88} y={175} h={65}/><DedoDobrado x={104} y={158} h={28}/>{[120,136].map((x,i)=><DedoDobrado key={i} x={x} y={155} h={22}/>)}<rect x={95} y={158} width={16} height={16} rx={7} fill={skin} stroke={dark} strokeWidth="1.5"/></g>),
-    L: (<g><Palma cy={175}/>{[104,120,136].map((x,i)=><DedoDobrado key={i} x={x} y={158} h={22}/>)}<Dedo x={88} y={175} h={65}/><rect x={50} y={152} width={35} height={15} rx={7} fill={skin} stroke={dark} strokeWidth="1.5"/></g>),
-    M: (<g><Palma cy={172}/>{[80,96,112].map((x,i)=><DedoDobrado key={i} x={x} y={162} h={28}/>)}<DedoDobrado x={128} y={158} h={22}/><ellipse cx={96} cy={168} rx={20} ry={8} fill={skin} stroke={dark} strokeWidth="1.5"/></g>),
-    N: (<g><Palma cy={172}/>{[88,104].map((x,i)=><DedoDobrado key={i} x={x} y={162} h={28}/>)}{[120,136].map((x,i)=><DedoDobrado key={i} x={x} y={158} h={22}/>)}<ellipse cx={96} cy={168} rx={14} ry={8} fill={skin} stroke={dark} strokeWidth="1.5"/></g>),
-    O: (<g><ellipse cx={100} cy={160} rx={38} ry={45} fill={skin} stroke={dark} strokeWidth="2"/><ellipse cx={100} cy={160} rx={20} ry={25} fill="#1e293b"/></g>),
-    P: (<g><Palma cx={100} cy={130}/><Dedo x={88} y={130} h={55}/><DedoDobrado x={104} y={118} h={28}/>{[120,136].map((x,i)=><DedoDobrado key={i} x={x} y={115} h={22}/>)}</g>),
-    Q: (<g><Palma cx={100} cy={130}/>{[80,96,112].map((x,i)=><DedoDobrado key={i} x={x} y={118} h={22}/>)}<rect x={58} y={130} width={50} height={15} rx={7} fill={skin} stroke={dark} strokeWidth="1.5"/><rect x={58} y={145} width={40} height={13} rx={6} fill={skin} stroke={dark} strokeWidth="1.5"/></g>),
-    R: (<g><Palma cy={175}/>{[120,136].map((x,i)=><DedoDobrado key={i} x={x} y={158} h={22}/>)}<DedoDobrado x={72} y={158} h={22}/><rect x={80} y={115} width={17} height={65} rx={8} fill={skin} stroke={dark} strokeWidth="1.5" transform="rotate(-8,88,148)"/><rect x={95} y={115} width={17} height={65} rx={8} fill={skin} stroke={dark} strokeWidth="1.5" transform="rotate(8,104,148)"/></g>),
-    S: (<g><Palma/>{[72,88,104,120].map((x,i)=><DedoDobrado key={i} x={x} y={152} h={25}/>)}<rect x={55} y={140} width={70} height={14} rx={7} fill={skin} stroke={dark} strokeWidth="1.5"/></g>),
-    T: (<g><Palma/>{[72,88,104,120].map((x,i)=><DedoDobrado key={i} x={x} y={152} h={25}/>)}<ellipse cx={88} cy={150} rx={10} ry={9} fill={skin} stroke={dark} strokeWidth="1.5"/></g>),
-    U: (<g><Palma cy={175}/><Dedo x={88} y={175} h={65}/><Dedo x={104} y={175} h={65}/>{[120,136].map((x,i)=><DedoDobrado key={i} x={x} y={158} h={22}/>)}<rect x={50} y={158} width={16} height={22} rx={8} fill={skin} stroke={dark} strokeWidth="1.5"/></g>),
-    V: (<g><Palma cy={175}/>{[120,136].map((x,i)=><DedoDobrado key={i} x={x} y={158} h={22}/>)}<DedoDobrado x={72} y={158} h={22}/><Dedo x={88} y={175} h={65} fill={skin}/><Dedo x={110} y={175} h={65} fill={skin}/></g>),
-    W: (<g><Palma cy={175}/><DedoDobrado x={136} y={158} h={22}/><DedoDobrado x={68} y={158} h={22}/>{[84,100,116].map((x,i)=><Dedo key={i} x={x} y={175} h={60-i*3}/>)}</g>),
-    X: (<g><Palma cy={175}/>{[104,120,136].map((x,i)=><DedoDobrado key={i} x={x} y={158} h={22}/>)}<rect x={50} y={158} width={16} height={22} rx={8} fill={skin} stroke={dark} strokeWidth="1.5"/><path d="M88,155 Q88,130 96,125 Q104,120 104,135 Q104,148 88,155" fill={skin} stroke={dark} strokeWidth="1.5"/></g>),
-    Y: (<g><Palma cy={175}/>{[88,104].map((x,i)=><DedoDobrado key={i} x={x} y={158} h={22}/>)}<DedoDobrado x={72} y={158} h={22}/><Dedo x={120} y={175} h={55}/><rect x={44} y={152} width={35} height={14} rx={7} fill={skin} stroke={dark} strokeWidth="1.5"/></g>),
-    Z: (<g><Palma cy={175}/>{[104,120,136].map((x,i)=><DedoDobrado key={i} x={x} y={158} h={22}/>)}<rect x={50} y={158} width={16} height={22} rx={8} fill={skin} stroke={dark} strokeWidth="1.5"/><Dedo x={88} y={175} h={65}/><path d="M75,118 L105,118 L75,138 L105,138" fill="none" stroke="#fbbf24" strokeWidth="2.5" strokeLinecap="round"/></g>),
+    A: ( // Punho fechado, polegar ao lado
+      <g>
+        <Palma/>
+        {[72,88,104,120].map((x,i)=><DedoDobrado key={i} x={x} y={150} h={25}/>)}
+        {/* polegar ao lado */}
+        <rect x={48} y={138} width={16} height={30} rx={8} fill={skin} stroke={dark} strokeWidth="1.5"/>
+      </g>
+    ),
+    B: ( // 4 dedos esticados, polegar dobrado
+      <g>
+        <Palma cy={175}/>
+        {[72,88,104,120].map((x,i)=><Dedo key={i} x={x} y={175} h={60}/>)}
+        <rect x={56} y={155} width={16} height={25} rx={8} fill={skin} stroke={dark} strokeWidth="1.5"/>
+      </g>
+    ),
+    C: ( // Mão em C
+      <g>
+        <path d="M140,120 Q170,100 170,160 Q170,210 140,220" fill="none" stroke={dark} strokeWidth="3"/>
+        <path d="M140,120 Q105,100 100,160 Q100,210 140,220" fill={skin} stroke={dark} strokeWidth="2"/>
+        <path d="M100,160 Q100,100 140,90 Q175,80 180,140" fill="none" stroke={skin} strokeWidth="18"/>
+        <path d="M100,160 Q100,215 140,225 Q175,230 180,190" fill="none" stroke={skin} strokeWidth="18"/>
+        {/* contorno C */}
+        <path d="M175,130 Q145,100 105,120 Q75,140 75,175 Q75,210 105,225 Q140,240 175,220"
+              fill="none" stroke={dark} strokeWidth="3"/>
+        <path d="M175,130 Q145,100 105,120 Q75,140 75,175 Q75,210 105,225 Q140,240 175,220"
+              fill={skin} stroke={dark} strokeWidth="2" opacity="0.9"/>
+      </g>
+    ),
+    D: ( // Indicador esticado, resto curvo tocando polegar
+      <g>
+        <Palma cy={175}/>
+        <Dedo x={88} y={175} h={65}/>
+        {[104,118].map((x,i)=><DedoDobrado key={i} x={x} y={155} h={20}/>)}
+        <DedoDobrado x={72} y={155} h={20}/>
+        {/* polegar toca dedos curvados */}
+        <ellipse cx={80} cy={162} rx={10} ry={8} fill={skin} stroke={dark} strokeWidth="1.5"/>
+      </g>
+    ),
+    E: ( // Todos os dedos dobrados, pontas na palma
+      <g>
+        <Palma cy={170}/>
+        {[72,88,104,120].map((x,i)=><DedoDobrado key={i} x={x} y={155} h={22}/>)}
+        <rect x={50} y={155} width={16} height={20} rx={8} fill={skin} stroke={dark} strokeWidth="1.5"/>
+      </g>
+    ),
+    F: ( // Polegar toca indicador, resto esticado
+      <g>
+        <Palma cy={175}/>
+        <DedoDobrado x={88} y={155} h={22}/>
+        {[104,120,136].map((x,i)=><Dedo key={i} x={x} y={175} h={55-i*3}/>)}
+        <ellipse cx={75} cy={158} rx={10} ry={9} fill={skin} stroke={dark} strokeWidth="1.5"/>
+      </g>
+    ),
+    G: ( // Polegar e indicador apontam para o lado
+      <g>
+        <Palma cy={175}/>
+        {[88,104,120].map((x,i)=><DedoDobrado key={i} x={x} y={158} h={22}/>)}
+        {/* indicador apontado lado */}
+        <rect x={115} y={148} width={50} height={16} rx={8} fill={skin} stroke={dark} strokeWidth="1.5"/>
+        <ellipse cx={116} cy={155} rx={9} ry={8} fill={nail} opacity="0.5"/>
+        {/* polegar */}
+        <rect x={110} y={162} width={40} height={14} rx={7} fill={skin} stroke={dark} strokeWidth="1.5"/>
+      </g>
+    ),
+    H: ( // Indicador e médio esticados horizontalmente
+      <g>
+        <Palma cy={175}/>
+        {[104,120].map((x,i)=><DedoDobrado key={i} x={x} y={158} h={22}/>)}
+        {/* indicador e médio deitados */}
+        <rect x={108} y={140} width={55} height={15} rx={7} fill={skin} stroke={dark} strokeWidth="1.5"/>
+        <rect x={108} y={156} width={55} height={15} rx={7} fill={skin} stroke={dark} strokeWidth="1.5"/>
+      </g>
+    ),
+    I: ( // Só o mindinho esticado
+      <g>
+        <Palma cy={175}/>
+        {[72,88,104].map((x,i)=><DedoDobrado key={i} x={x} y={158} h={22}/>)}
+        <Dedo x={120} y={175} h={55}/>
+        <rect x={50} y={158} width={16} height={22} rx={8} fill={skin} stroke={dark} strokeWidth="1.5"/>
+      </g>
+    ),
+    J: ( // Mindinho esticado + movimento J
+      <g>
+        <Palma cy={175}/>
+        {[72,88,104].map((x,i)=><DedoDobrado key={i} x={x} y={158} h={22}/>)}
+        <Dedo x={120} y={175} h={55}/>
+        <rect x={50} y={158} width={16} height={22} rx={8} fill={skin} stroke={dark} strokeWidth="1.5"/>
+        {/* seta J */}
+        <path d="M120,120 Q140,105 145,120 Q148,135 130,145" fill="none" stroke="#fbbf24" strokeWidth="2.5" strokeDasharray="4,2"/>
+        <polygon points="126,143 134,148 128,152" fill="#fbbf24"/>
+      </g>
+    ),
+    K: ( // Indicador esticado, médio dobrado, polegar no meio
+      <g>
+        <Palma cy={175}/>
+        <Dedo x={88} y={175} h={65}/>
+        <DedoDobrado x={104} y={158} h={28}/>
+        {[120,136].map((x,i)=><DedoDobrado key={i} x={x} y={155} h={22}/>)}
+        <rect x={95} y={158} width={16} height={16} rx={7} fill={skin} stroke={dark} strokeWidth="1.5"/>
+      </g>
+    ),
+    L: ( // Polegar e indicador em L
+      <g>
+        <Palma cy={175}/>
+        {[104,120,136].map((x,i)=><DedoDobrado key={i} x={x} y={158} h={22}/>)}
+        <Dedo x={88} y={175} h={65}/>
+        <rect x={50} y={152} width={35} height={15} rx={7} fill={skin} stroke={dark} strokeWidth="1.5"/>
+      </g>
+    ),
+    M: ( // 3 dedos dobrados sobre polegar
+      <g>
+        <Palma cy={172}/>
+        {[80,96,112].map((x,i)=><DedoDobrado key={i} x={x} y={162} h={28}/>)}
+        <DedoDobrado x={128} y={158} h={22}/>
+        <ellipse cx={96} cy={168} rx={20} ry={8} fill={skin} stroke={dark} strokeWidth="1.5"/>
+      </g>
+    ),
+    N: ( // 2 dedos dobrados sobre polegar
+      <g>
+        <Palma cy={172}/>
+        {[88,104].map((x,i)=><DedoDobrado key={i} x={x} y={162} h={28}/>)}
+        {[120,136].map((x,i)=><DedoDobrado key={i} x={x} y={158} h={22}/>)}
+        <ellipse cx={96} cy={168} rx={14} ry={8} fill={skin} stroke={dark} strokeWidth="1.5"/>
+      </g>
+    ),
+    O: ( // Todos os dedos formam O
+      <g>
+        <ellipse cx={100} cy={160} rx={38} ry={45} fill={skin} stroke={dark} strokeWidth="2"/>
+        <ellipse cx={100} cy={160} rx={20} ry={25} fill="#1e293b"/>
+        <ellipse cx={100} cy={160} rx={18} ry={23} fill="#1e293b"/>
+      </g>
+    ),
+    P: ( // Como K mas para baixo
+      <g>
+        <Palma cx={100} cy={130}/>
+        <Dedo x={88} y={130} h={55}/>
+        <DedoDobrado x={104} y={118} h={28}/>
+        {[120,136].map((x,i)=><DedoDobrado key={i} x={x} y={115} h={22}/>)}
+      </g>
+    ),
+    Q: ( // Como G mas para baixo
+      <g>
+        <Palma cx={100} cy={130}/>
+        {[80,96,112].map((x,i)=><DedoDobrado key={i} x={x} y={118} h={22}/>)}
+        <rect x={58} y={130} width={50} height={15} rx={7} fill={skin} stroke={dark} strokeWidth="1.5"/>
+        <rect x={58} y={145} width={40} height={13} rx={6} fill={skin} stroke={dark} strokeWidth="1.5"/>
+      </g>
+    ),
+    R: ( // Indicador e médio cruzados
+      <g>
+        <Palma cy={175}/>
+        {[120,136].map((x,i)=><DedoDobrado key={i} x={x} y={158} h={22}/>)}
+        <DedoDobrado x={72} y={158} h={22}/>
+        {/* dois dedos cruzados */}
+        <rect x={80} y={115} width={17} height={65} rx={8} fill={skin} stroke={dark} strokeWidth="1.5" transform="rotate(-8,88,148)"/>
+        <rect x={95} y={115} width={17} height={65} rx={8} fill={skin} stroke={dark} strokeWidth="1.5" transform="rotate(8,104,148)"/>
+      </g>
+    ),
+    S: ( // Punho fechado, polegar por cima
+      <g>
+        <Palma/>
+        {[72,88,104,120].map((x,i)=><DedoDobrado key={i} x={x} y={152} h={25}/>)}
+        <rect x={55} y={140} width={70} height={14} rx={7} fill={skin} stroke={dark} strokeWidth="1.5"/>
+      </g>
+    ),
+    T: ( // Polegar entre indicador e médio
+      <g>
+        <Palma/>
+        {[72,88,104,120].map((x,i)=><DedoDobrado key={i} x={x} y={152} h={25}/>)}
+        <ellipse cx={88} cy={150} rx={10} ry={9} fill={skin} stroke={dark} strokeWidth="1.5"/>
+      </g>
+    ),
+    U: ( // Indicador e médio juntos esticados
+      <g>
+        <Palma cy={175}/>
+        <Dedo x={88} y={175} h={65}/>
+        <Dedo x={104} y={175} h={65}/>
+        {[120,136].map((x,i)=><DedoDobrado key={i} x={x} y={158} h={22}/>)}
+        <rect x={50} y={158} width={16} height={22} rx={8} fill={skin} stroke={dark} strokeWidth="1.5"/>
+      </g>
+    ),
+    V: ( // Indicador e médio em V
+      <g>
+        <Palma cy={175}/>
+        {[120,136].map((x,i)=><DedoDobrado key={i} x={x} y={158} h={22}/>)}
+        <DedoDobrado x={72} y={158} h={22}/>
+        <Dedo x={88} y={175} h={65} fill={skin}/>
+        <Dedo x={110} y={175} h={65} fill={skin}/>
+      </g>
+    ),
+    W: ( // Indicador, médio e anelar esticados
+      <g>
+        <Palma cy={175}/>
+        <DedoDobrado x={136} y={158} h={22}/>
+        <DedoDobrado x={68} y={158} h={22}/>
+        {[84,100,116].map((x,i)=><Dedo key={i} x={x} y={175} h={60-i*3}/>)}
+      </g>
+    ),
+    X: ( // Indicador dobrado em gancho
+      <g>
+        <Palma cy={175}/>
+        {[104,120,136].map((x,i)=><DedoDobrado key={i} x={x} y={158} h={22}/>)}
+        <rect x={50} y={158} width={16} height={22} rx={8} fill={skin} stroke={dark} strokeWidth="1.5"/>
+        {/* gancho */}
+        <path d="M88,155 Q88,130 96,125 Q104,120 104,135 Q104,148 88,155" fill={skin} stroke={dark} strokeWidth="1.5"/>
+      </g>
+    ),
+    Y: ( // Polegar e mindinho esticados
+      <g>
+        <Palma cy={175}/>
+        {[88,104].map((x,i)=><DedoDobrado key={i} x={x} y={158} h={22}/>)}
+        <DedoDobrado x={72} y={158} h={22}/>
+        <Dedo x={120} y={175} h={55}/>
+        <rect x={44} y={152} width={35} height={14} rx={7} fill={skin} stroke={dark} strokeWidth="1.5"/>
+      </g>
+    ),
+    Z: ( // Indicador traça Z
+      <g>
+        <Palma cy={175}/>
+        {[104,120,136].map((x,i)=><DedoDobrado key={i} x={x} y={158} h={22}/>)}
+        <rect x={50} y={158} width={16} height={22} rx={8} fill={skin} stroke={dark} strokeWidth="1.5"/>
+        <Dedo x={88} y={175} h={65}/>
+        {/* seta Z */}
+        <path d="M75,118 L105,118 L75,138 L105,138" fill="none" stroke="#fbbf24" strokeWidth="2.5" strokeLinecap="round"/>
+        <polygon points="102,134 108,141 98,141" fill="#fbbf24"/>
+      </g>
+    ),
   };
-  return (<svg viewBox="0 0 200 260" width="120" height="120" style={{background:"#1e293b",borderRadius:8,padding:4}}><rect width="200" height="260" fill="#1e293b" rx="8"/>{gestos[letra] || <text x="100" y="140" textAnchor="middle" fill="#fbbf24" fontSize="80" fontWeight="bold">{letra}</text>}</svg>);
+
+  return (
+    <svg viewBox="0 0 200 260" width="120" height="120" style={{background:"#1e293b",borderRadius:8,padding:4}}>
+      <rect width="200" height="260" fill="#1e293b" rx="8"/>
+      {gestos[letra] || <text x="100" y="140" textAnchor="middle" fill="#fbbf24" fontSize="80" fontWeight="bold">{letra}</text>}
+    </svg>
+  );
 }
 
 const ALFABETO = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
-function dist2d(a, b) { return Math.sqrt((a.x-b.x)**2 + (a.y-b.y)**2); }
-function curvaturaDedo(lm, ponta, mcp) {
-  const dPonta = dist2d(lm[ponta], lm[0]); const dMcp = dist2d(lm[mcp], lm[0]);
-  return Math.max(0, Math.min(1, (1.3 - (dPonta / (dMcp || 0.01))) / 0.6));
+
+// Deteção de gestos baseada nos 21 pontos do HandPose
+function dist(a, b) {
+  return Math.sqrt((a.x-b.x)**2 + (a.y-b.y)**2 + ((a.z||0)-(b.z||0))**2);
 }
+
+function dist2d(a, b) {
+  return Math.sqrt((a.x-b.x)**2 + (a.y-b.y)**2);
+}
+
+// Com MediaPipe as coords são normalizadas 0..1, escala típica da mão ~0.3
+// Ajustamos a função de extensão para esse espaço
+
+// Retorna valor 0..1 de quão dobrado está o dedo (0=esticado, 1=fechado)
+function curvaturaDedo(lm, ponta, media, base, mcp) {
+  const dPonta = dist2d(lm[ponta], lm[0]);
+  const dMcp   = dist2d(lm[mcp],   lm[0]);
+  // Se ponta está muito mais perto do pulso do que a articulação base, está dobrado
+  const ratio = dPonta / (dMcp || 0.01);
+  // ratio < 1 = dobrado, ratio > 1.2 = esticado
+  return Math.max(0, Math.min(1, (1.3 - ratio) / 0.6));
+}
+
 function dedosEstendidos(lm) {
-  const pulso = lm[0]; const escala = dist2d(lm[0], lm[17]) || 0.1;
-  const ext = (p, m) => dist2d(lm[p], pulso) > dist2d(lm[m], pulso) * 1.15;
-  return [dist2d(lm[4], lm[2]) / escala > 0.45, ext(8, 5), ext(12, 9), ext(16, 13), ext(20, 17)];
+  const pulso  = lm[0];
+  const escala = dist2d(pulso, lm[17]) || 0.1;
+
+  // Cada dedo: ponta mais longe do pulso que a sua base MCP
+  function ext(ponta, mcp) {
+    return dist2d(lm[ponta], pulso) > dist2d(lm[mcp], pulso) * 1.15;
+  }
+
+  const P  = dist2d(lm[4], lm[2]) / escala > 0.45; // polegar: distância ponta-base
+  const I  = ext(8,  5);
+  const M  = ext(12, 9);
+  const A  = ext(16, 13);
+  const Mi = ext(20, 17);
+
+  return [P, I, M, A, Mi];
 }
 
 function detetarLetra(lm) {
   const [P, I, M, A, Mi] = dedosEstendidos(lm);
   const nExt = [P,I,M,A,Mi].filter(Boolean).length;
-  const escala = dist2d(lm[0], lm[17]) || 0.1;
-  const dPolInd = dist2d(lm[4], lm[8]) / escala;
-  const cI = curvaturaDedo(lm, 8, 5); const cM = curvaturaDedo(lm, 12, 9);
-  const cA = curvaturaDedo(lm, 16, 13); const cMi = curvaturaDedo(lm, 20, 17);
 
-  // Gestos abertos
-  if (!P && I && M && A && Mi) return { letra: 'B', conf: 90 };
-  if (!P && I && M && A && !Mi) return { letra: 'W', conf: 87 };
-  if (P && I && M && !A && !Mi) return { letra: 'K', conf: 85 };
-  if (P && I && !M && !A && !Mi) return { letra: 'L', conf: 88 };
-  if (P && !I && !M && !A && Mi) return { letra: 'Y', conf: 90 };
-  if (!P && I && M && !A && !Mi) return { letra: 'V', conf: 88 };
-  if (!P && I && !M && !A && !Mi) return { letra: 'D', conf: 88 };
-  if (!P && !I && !M && !A && Mi) return { letra: 'I', conf: 90 };
+  const pulso  = lm[0];
+  const escala = dist2d(pulso, lm[17]) || 0.1;
 
-  // Gestos curvos (C, O, F) - Sensibilidade aumentada
-  if (dPolInd < 0.35 && cI > 0.35 && cM > 0.35) return { letra: 'O', conf: 92 };
-  if (dPolInd > 0.35 && dPolInd < 0.95 && cI < 0.7 && cM < 0.7) return { letra: 'C', conf: 88 };
-  if (dPolInd < 0.45 && cI > 0.4 && cM < 0.45) return { letra: 'F', conf: 85 };
+  // Distâncias úteis (normalizadas pela escala da mão)
+  const dPolInd  = dist2d(lm[4], lm[8])  / escala; // polegar-indicador
+  const dPolMed  = dist2d(lm[4], lm[12]) / escala; // polegar-médio
+  const dPolAnel = dist2d(lm[4], lm[16]) / escala; // polegar-anelar
+  const dPolMind = dist2d(lm[4], lm[20]) / escala; // polegar-mindinho
+  const sepIndMed  = dist2d(lm[8],  lm[12]) / escala;
+  const sepMedAnel = dist2d(lm[12], lm[16]) / escala;
 
-  // Punhos (A, S, T, E, M, N)
-  if (nExt <= 1) {
-    const polX = lm[4].x; const indX = lm[5].x; const medX = lm[9].x;
-    const polY = lm[4].y; const indY = lm[5].y;
-    if (Math.abs(polX - medX) < escala * 0.25 && polY < indY) return { letra: 'S', conf: 88 };
-    if (polX > indX && polX < medX && polY < indY) return { letra: 'T', conf: 85 };
-    if (polX < indX - escala * 0.05) return { letra: 'A', conf: 85 };
-    if (dPolInd < 0.45 && dPolMed < 0.45) {
-      if (dist2d(lm[4], lm[16])/escala < 0.5) return { letra: 'M', conf: 84 };
-      return { letra: 'N', conf: 84 };
-    }
-    if (cI > 0.75 && cM > 0.75) return { letra: 'E', conf: 86 };
+  // Curvatura de cada dedo (0=esticado, 1=fechado)
+  const cP  = curvaturaDedo(lm, 4,  3,  2,  1);
+  const cI  = curvaturaDedo(lm, 8,  7,  6,  5);
+  const cM  = curvaturaDedo(lm, 12, 11, 10, 9);
+  const cA  = curvaturaDedo(lm, 16, 15, 14, 13);
+  const cMi = curvaturaDedo(lm, 20, 19, 18, 17);
+
+  // Direção do indicador (para cima = positivo)
+  const dyInd  = (lm[6].y - lm[8].y)  / escala;
+  const dyMed  = (lm[10].y - lm[12].y) / escala;
+  const dxInd  = (lm[8].x  - lm[6].x)  / escala;
+
+  // ── 5 DEDOS ──────────────────────────────────────────────────
+  // B: 4 dedos esticados, polegar dobrado encostado à palma
+  if (!P && I && M && A && Mi && cP > 0.4)
+    return { letra: 'B', conf: 90 };
+
+  // ── 4 DEDOS ──────────────────────────────────────────────────
+  // W: indicador + médio + anelar (sem polegar e sem mindinho)
+  if (!P && I && M && A && !Mi && cMi > 0.4)
+    return { letra: 'W', conf: 87 };
+
+  // ── 3 DEDOS ──────────────────────────────────────────────────
+  // Polegar + indicador + médio
+  if (P && I && M && !A && !Mi && cA > 0.4 && cMi > 0.4) {
+    if (dyInd > 0.2) return { letra: 'K', conf: 83 };
+    return { letra: 'P', conf: 80 };
   }
+
+  // Indicador + médio + anelar
+  if (!P && I && M && A && !Mi)
+    return { letra: 'W', conf: 85 };
+
+  // ── 2 DEDOS ──────────────────────────────────────────────────
+  // Polegar + indicador = L ou G
+  if (P && I && !M && !A && !Mi && cM > 0.4 && cA > 0.4 && cMi > 0.4) {
+    if (dyInd > 0.2) return { letra: 'L', conf: 88 };
+    return { letra: 'G', conf: 82 };
+  }
+
+  // Polegar + mindinho = Y
+  if (P && !I && !M && !A && Mi && cI > 0.4 && cM > 0.4 && cA > 0.4)
+    return { letra: 'Y', conf: 90 };
+
+  // Indicador + médio = V, U ou R
+  if (!P && I && M && !A && !Mi && cA > 0.4 && cMi > 0.4) {
+    if (sepIndMed > 0.35)                      return { letra: 'V', conf: 88 };
+    // R: indicador cruza por cima do médio
+    if (lm[8].x > lm[12].x + escala * 0.05)   return { letra: 'R', conf: 84 };
+    return { letra: 'U', conf: 84 };
+  }
+
+  // ── 1 DEDO ───────────────────────────────────────────────────
+  // Só indicador = D
+  if (!P && I && !M && !A && !Mi && cM > 0.4 && cA > 0.4 && cMi > 0.4)
+    return { letra: 'D', conf: 88 };
+
+  // Só mindinho = I
+  if (!P && !I && !M && !A && Mi && cI > 0.4 && cM > 0.4 && cA > 0.4)
+    return { letra: 'I', conf: 90 };
+
+  // ── 0 DEDOS — PUNHO / CURVATURAS ESPECIAIS ───────────────────
+  if (nExt === 0 || (nExt === 1 && P)) {
+    // O: todos curvados, polegar-indicador muito próximos (circulo)
+    if (dPolInd < 0.28 && cI > 0.3 && cM > 0.3 && cA > 0.3)
+      return { letra: 'O', conf: 90 };
+
+    // F: polegar toca indicador, restantes mais soltos
+    if (dPolInd < 0.32 && cI > 0.4 && cM < 0.5 && cA < 0.5 && cMi < 0.5)
+      return { letra: 'F', conf: 85 };
+
+    // C: forma de C — dedos semi-curvados, polegar afastado
+    if (dPolInd > 0.30 && dPolInd < 0.70 && cI < 0.75 && cM < 0.75)
+      return { letra: 'C', conf: 84 };
+
+    // X: indicador dobrado em gancho (ponta próxima do médio)
+    if (dist2d(lm[8], lm[6]) / escala < 0.35 && cI > 0.5 && cM > 0.5)
+      return { letra: 'X', conf: 82 };
+
+    // Verificações de posição do polegar para distinguir punhos fechados
+    // polegar está em cima (y da ponta próximo das articulações dos dedos)
+    const polgarEmCima = lm[4].y > lm[5].y && lm[4].y < lm[9].y;
+    // polegar está lateralmente (x da ponta claramente fora do punho)
+    const polgarAoLado = lm[4].x < lm[5].x - escala * 0.15;
+    // polegar entre indicador e médio horizontalmente
+    const polgarEntreIndMed = lm[4].x > Math.min(lm[5].x, lm[9].x) - escala * 0.05
+                           && lm[4].x < Math.max(lm[5].x, lm[9].x) + escala * 0.05;
+
+    // S: punho fechado, polegar POR CIMA (polegar cobre os dedos dobrados)
+    // Polegar em cima dos dedos, muito próximo do médio/anelar
+    if (polgarEmCima && dPolMed < 0.32 && cI > 0.5 && cM > 0.5 && cA > 0.5 && cMi > 0.5)
+      return { letra: 'S', conf: 86 };
+
+    // T: polegar espetado entre indicador e médio (parcialmente visível entre eles)
+    // O polegar está na posição horizontal entre ind e médio, ambos muito fechados
+    if (polgarEntreIndMed && dPolInd < 0.30 && dPolMed < 0.38
+        && cI > 0.55 && cM > 0.55 && cA > 0.5 && cMi > 0.5)
+      return { letra: 'T', conf: 83 };
+
+    // N: indicador + médio dobrados sobre o polegar (2 dedos cobrem polegar)
+    // anelar e mindinho também fechados mas NÃO sobre o polegar
+    if (dPolInd < 0.35 && dPolMed < 0.38 && dPolAnel > 0.40
+        && cI > 0.45 && cM > 0.45 && cA > 0.5 && cMi > 0.5)
+      return { letra: 'N', conf: 82 };
+
+    // M: indicador + médio + anelar dobrados sobre o polegar (3 dedos cobrem)
+    if (dPolInd < 0.38 && dPolMed < 0.42 && dPolAnel < 0.52
+        && cI > 0.45 && cM > 0.45 && cA > 0.45 && cMi > 0.5)
+      return { letra: 'M', conf: 82 };
+
+    // E: todos os dedos dobrados para a palma, pontas na palma
+    // Curvatura alta em todos, polegar afastado lateralmente (não em cima)
+    if (cI > 0.58 && cM > 0.58 && cA > 0.58 && cMi > 0.58 && dPolInd > 0.32 && !polgarEmCima)
+      return { letra: 'E', conf: 84 };
+
+    // A: punho fechado, polegar ao lado (não em cima, não entre dedos)
+    // Condição de fallback para punho com polegar lateral
+    if (cI > 0.5 && cM > 0.5 && cA > 0.5 && cMi > 0.5)
+      return { letra: 'A', conf: 83 };
+  }
+
   return { letra: null, conf: 0 };
 }
 
-function sortearPalavra() { return { ...PALAVRAS[Math.floor(Math.random() * PALAVRAS.length)] }; }
+function sortearPalavra() {
+  return { ...PALAVRAS[Math.floor(Math.random() * PALAVRAS.length)] };
+}
 
 export default function App() {
-  const [entrada, setEntrada] = useState(sortearPalavra);
-  const [tentativas, setTentativas] = useState([]);
-  const [atual, setAtual] = useState([]);
-  const [estadoJogo, setEstadoJogo] = useState('jogando');
-  const [pontuacao, setPontuacao] = useState(0);
-  const [mensagem, setMensagem] = useState('');
-  const [msgTipo, setMsgTipo] = useState('');
-  const [camAtiva, setCamAtiva] = useState(false);
-  const [letraCam, setLetraCam] = useState(null);
-  const [confianca, setConfianca] = useState(0);
-  const [contagem, setContagem] = useState(null);
-  const [letraManual, setLetraManual] = useState(null);
-  const videoRef = useRef(null); const canvasRef = useRef(null);
-  const detectorRef = useRef(null); const streamRef = useRef(null);
-  const animRef = useRef(null); const letraRef = useRef(null);
-  const contTimerRef = useRef(null);
+  const MAX_TENT = 6;
+  const TAMANHO  = 4;
 
+  // Estado do jogo
+  const [entrada,      setEntrada]      = useState(sortearPalavra);
+  const [tentativas,   setTentativas]   = useState([]);
+  const [atual,        setAtual]        = useState([]);
+  const [estadoJogo,   setEstadoJogo]   = useState('jogando');
+  const [pontuacao,    setPontuacao]    = useState(0);
+  const [mensagem,     setMensagem]     = useState('');
+  const [msgTipo,      setMsgTipo]      = useState('');
+
+  // Estado câmara
+  const [camAtiva,     setCamAtiva]     = useState(false);
+  const [modeloOk,     setModeloOk]     = useState(false);
+  const [letraCam,     setLetraCam]     = useState(null);
+  const [confianca,    setConfianca]    = useState(0);
+  const [contagem,     setContagem]     = useState(null);
+  const [letraManual,  setLetraManual]  = useState(null);
+  const [debugInfo,    setDebugInfo]    = useState('aguarda...');
+
+  // Refs
+  const videoRef      = useRef(null);
+  const canvasRef     = useRef(null);
+  const detectorRef   = useRef(null);
+  const streamRef     = useRef(null);
+  const animRef       = useRef(null);
+  const letraRef      = useRef(null);
+  const contTimerRef  = useRef(null);
+  const contSecsRef   = useRef(0);
+
+  // ── Mostrar mensagem temporária ──────────────────────────────
   const mostrarMsg = useCallback((txt, tipo = '', ms = 2000) => {
-    setMensagem(txt); setMsgTipo(tipo);
+    setMensagem(txt);
+    setMsgTipo(tipo);
     if (ms) setTimeout(() => setMensagem(''), ms);
   }, []);
 
-  const confirmar = useCallback(() => {
-    if (atual.length !== 4) { mostrarMsg('⚠️ Precisa de 4 letras!', 'aviso'); return; }
-    const chute = atual.join('');
-    const pArr = entrada.palavra.split('');
-    const res = atual.map((l, i) => l === pArr[i] ? 'correto' : pArr.includes(l) ? 'presente' : 'errado');
-    const novas = [...tentativas, { letras: atual, resultado: res }];
-    setTentativas(novas); setAtual([]);
-    if (chute === entrada.palavra) {
-      setPontuacao(p => p + (7 - novas.length) * 100); setEstadoJogo('ganhou');
-      mostrarMsg('🎉 Parabéns!', 'ganhou', 3000);
-    } else if (novas.length >= 6) {
-      setEstadoJogo('perdeu'); mostrarMsg(`😔 Era: ${entrada.palavra}`, 'perdeu', 4000);
+  // ── Lógica do jogo ───────────────────────────────────────────
+  const calcularResultado = (chute, palavra) => {
+    const res  = Array(TAMANHO).fill('errado');
+    const pArr = palavra.split('');
+    const cArr = chute.split('');
+    const used = Array(TAMANHO).fill(false);
+    for (let i = 0; i < TAMANHO; i++)
+      if (cArr[i] === pArr[i]) { res[i] = 'correto'; used[i] = true; }
+    for (let i = 0; i < TAMANHO; i++) {
+      if (res[i] === 'correto') continue;
+      for (let j = 0; j < TAMANHO; j++)
+        if (!used[j] && cArr[i] === pArr[j]) { res[i] = 'presente'; used[j] = true; break; }
     }
-  }, [atual, entrada, tentativas, mostrarMsg]);
+    return res;
+  };
 
+  const confirmar = useCallback(() => {
+    setAtual(prev => {
+      if (prev.length !== TAMANHO) { mostrarMsg('⚠️ Precisa de 4 letras!', 'aviso'); return prev; }
+      const chute     = prev.join('');
+      const resultado = calcularResultado(chute, entrada.palavra);
+      const nova      = { letras: prev, resultado };
+      setTentativas(t => {
+        const novas = [...t, nova];
+        if (chute === entrada.palavra) {
+          const bonus = (MAX_TENT - novas.length + 1) * 100;
+          setPontuacao(p => p + bonus);
+          setEstadoJogo('ganhou');
+          mostrarMsg(`🎉 Parabéns! +${bonus} pontos!`, 'ganhou', 3000);
+        } else if (novas.length >= MAX_TENT) {
+          setEstadoJogo('perdeu');
+          mostrarMsg(`😔 Era: ${entrada.palavra}`, 'perdeu', 4000);
+        }
+        return novas;
+      });
+      return [];
+    });
+  }, [entrada, mostrarMsg]);
+
+  const apagarLetra = useCallback(() => {
+    setAtual(prev => prev.slice(0, -1));
+    resetContagem();
+  }, []);
+
+  const novoJogo = useCallback(() => {
+    setEntrada(sortearPalavra());
+    setTentativas([]);
+    setAtual([]);
+    setEstadoJogo('jogando');
+    setMensagem('');
+    setLetraCam(null);
+    setContagem(null);
+    letraRef.current = null;
+  }, []);
+
+  // ── Câmara ───────────────────────────────────────────────────
   const ligarCamera = useCallback(async () => {
     try {
-      const s = await navigator.mediaDevices.getUserMedia({ video: { width: 640, height: 480 } });
-      streamRef.current = s; videoRef.current.srcObject = s; setCamAtiva(true);
-      if (!window.Hands) {
-        const script = document.createElement('script'); script.src = 'https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js';
-        script.crossOrigin = 'anonymous'; await new Promise(r => { script.onload = r; document.head.appendChild(script); });
-      }
-      const hands = new window.Hands({ locateFile: (f) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${f}` });
-      hands.setOptions({ maxNumHands: 1, modelComplexity: 1, minDetectionConfidence: 0.7, minTrackingConfidence: 0.7 });
-      hands.onResults((results) => {
-        const canvas = canvasRef.current; if (!canvas) return;
-        const ctx = canvas.getContext('2d'); canvas.width = results.image.width; canvas.height = results.image.height;
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-        if (results.multiHandLandmarks?.length > 0) {
-          const lm = results.multiHandLandmarks[0]; const { letra, conf } = detetarLetra(lm);
-          setLetraCam(letra); setConfianca(conf);
-          if (letra && conf >= 55) {
-            if (letra !== letraRef.current) {
-              letraRef.current = letra; clearInterval(contTimerRef.current);
-              let secs = 3; setContagem(3);
-              contTimerRef.current = setInterval(() => {
-                secs--; setContagem(secs);
-                if (secs <= 0) {
-                  clearInterval(contTimerRef.current); setContagem(null);
-                  setAtual(prev => prev.length < 4 ? [...prev, letra] : prev);
-                  letraRef.current = null;
-                }
-              }, 1000);
-            }
-          } else { clearInterval(contTimerRef.current); setContagem(null); letraRef.current = null; }
-          ctx.strokeStyle = '#fbbf24'; ctx.lineWidth = 2;
-          [[0,1],[1,2],[2,3],[3,4],[0,5],[5,6],[6,7],[7,8],[0,9],[9,10],[10,11],[11,12],[0,13],[13,14],[14,15],[15,16],[0,17],[17,18],[18,19],[19,20]].forEach(([a,b]) => {
-            ctx.beginPath(); ctx.moveTo(lm[a].x*canvas.width, lm[a].y*canvas.height); ctx.lineTo(lm[b].x*canvas.width, lm[b].y*canvas.height); ctx.stroke();
-          });
-        } else { setLetraCam(null); setConfianca(0); clearInterval(contTimerRef.current); setContagem(null); }
+      const s = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 } }
       });
+      streamRef.current = s;
+      videoRef.current.srcObject = s;
+      await videoRef.current.play();
+      setCamAtiva(true);
+      mostrarMsg('⏳ A carregar modelo MediaPipe...', '', 0);
+
+      // Carregar MediaPipe Hands via CDN
+      await new Promise((resolve, reject) => {
+        if (window.Hands) { resolve(); return; }
+        const script = document.createElement('script');
+        script.src = 'https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js';
+        script.crossOrigin = 'anonymous';
+        script.onload = resolve;
+        script.onerror = reject;
+        document.head.appendChild(script);
+      });
+
+      const hands = new window.Hands({
+        locateFile: (file) =>
+          `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`
+      });
+      hands.setOptions({
+        maxNumHands: 1,
+        modelComplexity: 1,
+        minDetectionConfidence: 0.7,
+        minTrackingConfidence: 0.7,
+      });
+
+      hands.onResults((results) => {
+        const canvas = canvasRef.current;
+        if (!canvas) return;
+        const ctx = canvas.getContext('2d');
+        canvas.width  = results.image.width  || 640;
+        canvas.height = results.image.height || 480;
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        setDebugInfo('maos:' + (results.multiHandLandmarks?.length || 0) +
+          ' res:' + canvas.width + 'x' + canvas.height);
+
+        if (results.multiHandLandmarks && results.multiHandLandmarks.length > 0) {
+          const lmNorm = results.multiHandLandmarks[0];
+
+          // Converter coordenadas normalizadas para pixels para desenhar
+          const kpPx = lmNorm.map(p => ({
+            x: p.x * canvas.width,
+            y: p.y * canvas.height,
+            z: p.z
+          }));
+          desenharMao(ctx, kpPx);
+
+          // detetarLetra usa coordenadas normalizadas (0..1)
+          const { letra, conf } = detetarLetra(lmNorm);
+          setLetraCam(letra);
+          setConfianca(conf);
+
+          if (letra && conf >= 55) {
+            setLetraManual(letra);
+            if (letra !== letraRef.current) {
+              letraRef.current = letra;
+              iniciarContagem(letra);
+            }
+          } else {
+            if (!letra) resetContagem();
+          }
+        } else {
+          setLetraCam(null);
+          setConfianca(0);
+          resetContagem();
+        }
+      });
+
       detectorRef.current = hands;
+
+      // Loop de envio de frames ao MediaPipe
       const loop = async () => {
-        if (videoRef.current?.readyState >= 2) await detectorRef.current.send({ image: videoRef.current });
+        const video = videoRef.current;
+        if (!video || !detectorRef.current) return;
+        if (video.readyState >= 2) {
+          try {
+            await detectorRef.current.send({ image: video });
+          } catch (e) {
+            setDebugInfo('ERRO: ' + e.message);
+          }
+        }
         animRef.current = requestAnimationFrame(loop);
       };
-      loop();
-    } catch (e) { mostrarMsg('❌ Erro na câmara', 'erro'); }
+      animRef.current = requestAnimationFrame(loop);
+
+      setModeloOk(true);
+      mostrarMsg('✅ Câmara pronta! Faz um gesto!', 'ok', 2500);
+    } catch (e) {
+      mostrarMsg('❌ Erro: ' + e.message, 'erro', 4000);
+    }
   }, [mostrarMsg]);
 
   const desligarCamera = useCallback(() => {
-    cancelAnimationFrame(animRef.current); streamRef.current?.getTracks().forEach(t => t.stop());
-    setCamAtiva(false); clearInterval(contTimerRef.current); setContagem(null);
+    cancelAnimationFrame(animRef.current);
+    streamRef.current?.getTracks().forEach(t => t.stop());
+    setCamAtiva(false);
+    setModeloOk(false);
+    setLetraCam(null);
+    setContagem(null);
+    letraRef.current = null;
+    resetContagem();
   }, []);
 
+  function resetContagem() {
+    clearInterval(contTimerRef.current);
+    contSecsRef.current = 0;
+    setContagem(null);
+    letraRef.current = null;
+  }
+
+  function iniciarContagem(letra) {
+    clearInterval(contTimerRef.current);
+    contSecsRef.current = 3;
+    setContagem(3);
+    contTimerRef.current = setInterval(() => {
+      contSecsRef.current -= 1;
+      setContagem(contSecsRef.current);
+      if (contSecsRef.current <= 0) {
+        clearInterval(contTimerRef.current);
+        setContagem(null);
+        // Guardar letra!
+        setAtual(prev => {
+          if (prev.length < TAMANHO && estadoJogo === 'jogando') {
+            mostrarMsg(`✅ "${letra}" guardada!`, 'ok', 1200);
+            setLetraManual(letra);
+            return [...prev, letra];
+          }
+          return prev;
+        });
+        letraRef.current = null;
+      }
+    }, 1000);
+  }
+
+  function desenharMao(ctx, kp) {
+    const conexoes = [
+      [0,1],[1,2],[2,3],[3,4],
+      [0,5],[5,6],[6,7],[7,8],
+      [0,9],[9,10],[10,11],[11,12],
+      [0,13],[13,14],[14,15],[15,16],
+      [0,17],[17,18],[18,19],[19,20],
+      [5,9],[9,13],[13,17]
+    ];
+    ctx.strokeStyle = '#fbbf24';
+    ctx.lineWidth   = 2;
+    conexoes.forEach(([a, b]) => {
+      if (!kp[a] || !kp[b]) return;
+      ctx.beginPath();
+      ctx.moveTo(kp[a].x, kp[a].y);
+      ctx.lineTo(kp[b].x, kp[b].y);
+      ctx.stroke();
+    });
+    ctx.fillStyle = '#fbbf24';
+    kp.forEach(p => {
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, 4, 0, 2 * Math.PI);
+      ctx.fill();
+    });
+  }
+
+  useEffect(() => () => {
+    desligarCamera();
+    clearInterval(contTimerRef.current);
+  }, []);
+
+  // Estado das letras para o teclado visual
+  const estadoLetras = {};
+  tentativas.forEach(t => {
+    t.letras.forEach((l, i) => {
+      const est = estadoLetras[l];
+      const nov = t.resultado[i];
+      if (est === 'correto') return;
+      if (nov === 'correto') estadoLetras[l] = 'correto';
+      else if (nov === 'presente' && est !== 'correto') estadoLetras[l] = 'presente';
+      else if (!est) estadoLetras[l] = 'errado';
+    });
+  });
+
+  // ── RENDER ───────────────────────────────────────────────────
   return (
     <div className="app">
+
+      {/* Cabeçalho */}
       <header className="cabecalho">
-        <div className="cab-titulo"><span>🚂</span><div><h1>TREMU NA OFICINA</h1><p>LGP — Língua Gestual Portuguesa</p></div><span>🔧</span></div>
+        <div className="cab-titulo">
+          <span>🚂</span>
+          <div>
+            <h1>TREMU NA OFICINA</h1>
+            <p>Jogo de Língua Gestual Portuguesa</p>
+          </div>
+          <span>🔧</span>
+        </div>
         <div className="pontuacao">⭐ {pontuacao} pts</div>
       </header>
-      <div className="dica-bar"><span>💡 {entrada.dica}</span><span>Tentativas: {tentativas.length}/6</span></div>
+
+      {/* Dica */}
+      <div className="dica-bar">
+        <span>💡 {entrada.dica}</span>
+        <span className="tent-count">Tentativas: {tentativas.length}/{MAX_TENT}</span>
+      </div>
+
+      {/* Área central: câmara + grelha */}
       <div className="centro">
+
+        {/* --- Bloco câmara --- */}
         <div className="cam-bloco">
-          <div className="cam-topo"><span>📷 Câmara</span><button className="btn-cam" onClick={camAtiva ? desligarCamera : ligarCamera}>{camAtiva ? 'Desligar' : 'Ligar'}</button></div>
-          <div className={`cam-video-wrap ${camAtiva ? '' : 'oculto'}`}><video ref={videoRef} className="cam-video" autoPlay muted playsInline /><canvas ref={canvasRef} className="cam-canvas" /></div>
+          <div className="cam-topo">
+            <span>📷 Câmara — Deteção Gestual</span>
+            <button
+              className={`btn-cam ${camAtiva ? 'ativa' : ''}`}
+              onClick={camAtiva ? desligarCamera : ligarCamera}
+            >
+              {camAtiva ? 'Desligar' : 'Ligar Câmara'}
+            </button>
+          </div>
+
+          {/* Área sem câmara */}
+          {!camAtiva && (
+            <div className="cam-off">
+              <div className="cam-off-icon">👋</div>
+              <p>Liga a câmara para jogar com gestos!</p>
+              <p className="cam-off-sub">A deteção corre no teu dispositivo — sem dados enviados.</p>
+              <button className="btn-ligar" onClick={ligarCamera}>📷 Ligar Câmara</button>
+            </div>
+          )}
+
+          {/* Vídeo + canvas */}
+          <div className={`cam-video-wrap ${camAtiva ? '' : 'oculto'}`}>
+            <video ref={videoRef} className="cam-video" autoPlay muted playsInline />
+            <canvas ref={canvasRef} className="cam-canvas" />
+          </div>
+
+          {/* Letra detetada + contagem */}
           {camAtiva && (
             <div className="cam-info">
+              <div style={{background:'#0f172a',color:'#fbbf24',fontSize:'11px',padding:'6px 8px',borderRadius:6,marginBottom:8,fontFamily:'monospace',lineHeight:1.6}}>
+                🔍 {debugInfo} | Letra: <b>{letraCam || 'nenhuma'}</b> | Conf: {confianca}%
+              </div>
+              <div className="cam-label">Gesto detetado:</div>
               <div className="letra-grande">{letraCam || '—'}</div>
-              <div className="conf-bar"><div className="conf-fill" style={{ width: confianca + '%', background: confianca > 80 ? '#4ade80' : '#fbbf24' }} /></div>
-              {contagem !== null && <div className="contagem">⏱️ {contagem}s</div>}
-              <div className="palavra-preview">{[0,1,2,3].map(i => <div key={i} className="caixa">{atual[i] || '_'}</div>)}</div>
-              <div className="cam-btns"><button className="btn-apagar" onClick={() => setAtual(prev => prev.slice(0,-1))}>←</button><button className="btn-confirmar" onClick={confirmar}>✓</button></div>
+
+              {/* Barra de confiança */}
+              <div className="conf-bar">
+                <div
+                  className="conf-fill"
+                  style={{
+                    width: confianca + '%',
+                    background: confianca > 80 ? '#4ade80' : confianca > 60 ? '#fbbf24' : '#ef4444'
+                  }}
+                />
+              </div>
+
+              {/* Contagem regressiva */}
+              {contagem !== null && (
+                <div className={`contagem ${contagem === 1 ? 'ativa' : 'aviso'}`}>
+                  ⏱️ A guardar em {contagem}...
+                </div>
+              )}
+              {contagem === null && letraCam && (
+                <div className="contagem-dica">Mantém o gesto 3 segundos</div>
+              )}
+
+              {/* Palavra a construir */}
+              <div className="palavra-preview">
+                {Array.from({ length: TAMANHO }).map((_, i) => (
+                  <div key={i} className={`caixa ${atual[i] ? 'cheia' : 'vazia'}`}>
+                    {atual[i] || '_'}
+                  </div>
+                ))}
+              </div>
+
+              {/* Botões */}
+              <div className="cam-btns">
+                <button className="btn-apagar" onClick={apagarLetra}>← Apagar</button>
+                <button
+                  className="btn-confirmar"
+                  onClick={confirmar}
+                  disabled={atual.length !== TAMANHO}
+                >
+                  Confirmar ✓
+                </button>
+              </div>
             </div>
           )}
         </div>
+
+        {/* --- Grelha de tentativas --- */}
         <div className="grelha-bloco">
           <div className="grelha">
-            {[0,1,2,3,4,5].map(ri => (
-              <div key={ri} className="linha">
-                {[0,1,2,3].map(ci => {
-                  const t = tentativas[ri];
-                  return <div key={ci} className={`celula ${t ? t.resultado[ci] : ''}`}>{t ? t.letras[ci] : (ri === tentativas.length ? atual[ci] : '')}</div>
-                })}
-              </div>
-            ))}
+            {Array.from({ length: MAX_TENT }).map((_, ri) => {
+              const tent  = tentativas[ri];
+              const eAtual = ri === tentativas.length && estadoJogo === 'jogando';
+              return (
+                <div key={ri} className="linha">
+                  {Array.from({ length: TAMANHO }).map((_, ci) => {
+                    let letra = '';
+                    let cls   = 'celula vazia';
+                    if (tent) {
+                      letra = tent.letras[ci];
+                      cls   = `celula ${tent.resultado[ci]}`;
+                    } else if (eAtual) {
+                      letra = atual[ci] || '';
+                      cls   = `celula ${letra ? 'preenchida' : 'vazia'}`;
+                    }
+                    return <div key={ci} className={cls}>{letra}</div>;
+                  })}
+                </div>
+              );
+            })}
+          </div>
+          <div className="legenda">
+            <span>🟩 Lugar certo</span>
+            <span>🟨 Existe, lugar errado</span>
+            <span>⬜ Não existe</span>
           </div>
         </div>
       </div>
+
+      {/* Mensagem de estado */}
       {mensagem && <div className={`mensagem ${msgTipo}`}>{mensagem}</div>}
+
+      {/* Fim de jogo */}
       {estadoJogo !== 'jogando' && (
-        <div className="fim-jogo">
-          <h2>{estadoJogo === 'ganhou' ? 'Ganhaste!' : 'Perbeste!'}</h2>
-          <p>A palavra era: {entrada.palavra}</p>
-          <button className="btn-novo-jogo" onClick={() => { setEntrada(sortearPalavra()); setTentativas([]); setAtual([]); setEstadoJogo('jogando'); }}>Novo Jogo</button>
+        <div className={`fim-jogo ${estadoJogo}`}>
+          <div className="fim-emoji">{estadoJogo === 'ganhou' ? '🎉🚂🎉' : '😔🔧😔'}</div>
+          <h2>{estadoJogo === 'ganhou' ? 'Excelente!' : 'Não foi desta vez...'}</h2>
+          <p>{estadoJogo === 'ganhou'
+            ? `Descobriste com ${tentativas.length} tentativa(s)!`
+            : 'A palavra era:'}
+          </p>
+          <p className="palavra-revelada">{entrada.palavra}</p>
+          <button className="btn-novo-jogo" onClick={novoJogo}>🚂 Nova Palavra!</button>
+          <p className="pts-total">Pontuação total: ⭐ {pontuacao} pts</p>
         </div>
       )}
+
+      {/* Manual LGP */}
       <div className="manual">
-        <div className="manual-grid">{ALFABETO.map(l => <div key={l} className="manual-carta" onClick={() => setLetraManual(l)}>{l}</div>)}</div>
-        {letraManual && <div className="manual-detalhe"><span>{letraManual}</span><HandSVG letra={letraManual} /><span>{LGP_DESCRICAO[letraManual]}</span></div>}
+        <div className="manual-topo">
+          <h3>📖 Manual — Alfabeto LGP</h3>
+          <span>Clica para ver o gesto</span>
+        </div>
+        <div className="manual-grid">
+          {ALFABETO.map(l => (
+            <div
+              key={l}
+              className={`manual-carta ${letraManual === l ? 'destaque' : ''} ${estadoLetras[l] || ''}`}
+              onClick={() => setLetraManual(letraManual === l ? null : l)}
+            >
+              <div className="manual-letra">{l}</div>
+            </div>
+          ))}
+        </div>
+        {letraManual && (
+          <div className="manual-detalhe">
+            <HandSVG letra={letraManual} />
+          </div>
+        )}
       </div>
+
     </div>
   );
 }
