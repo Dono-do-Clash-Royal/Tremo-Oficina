@@ -2,11 +2,10 @@
   "name": "tremu-oficina",
   "version": "0.1.0",
   "private": true,
-"dependencies": {
+  "dependencies": {
   "@mediapipe/hands": "^0.4.1675469240",
   "@tensorflow-models/hand-pose-detection": "^2.0.1",
-  "@tensorflow/tfjs-core": "^4.17.0",
-  "@tensorflow/tfjs-backend-webgl": "^4.17.0",
+  "@tensorflow/tfjs": "^4.17.0",
   "@testing-library/dom": "^10.4.1",
   "@testing-library/jest-dom": "^6.9.1",
   "@testing-library/react": "^16.3.2",

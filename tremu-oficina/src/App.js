@@ -1,5 +1,13 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import './App.css';
+import {
+  treinarModelo,
+  preverComModelo,
+  guardarModelo,
+  carregarModelo,
+  apagarModeloGuardado,
+  juntarDatasets,
+} from './treinoModelo';
 
 const PALAVRAS = [
   { palavra: "RODA", dica: "🔧 Parte circular do carro" },
@@ -59,19 +67,17 @@ function HandSVG({ letra }) {
         alt={`Gesto LGP letra ${letra}`}
         onError={() => setErro(true)}
         style={{
-          width: 120,
-          height: 160,
+          width: '100%',
+          height: '100%',
           objectFit: 'cover',
-          borderRadius: 10,
           display: 'block',
-          boxShadow: '0 4px 16px #0008',
         }}
       />
     );
   }
   return (
-    <svg viewBox="0 0 120 160" width="120" height="160" style={{borderRadius:10}}>
-      <rect width="120" height="160" fill="#1e293b" rx="10"/>
+    <svg viewBox="0 0 120 160" width="100%" height="100%">
+      <rect width="120" height="160" fill="#0f172a"/>
       <text x="60" y="100" textAnchor="middle" fill="#fbbf24" fontSize="80" fontWeight="bold">{letra}</text>
     </svg>
   );
@@ -537,6 +543,22 @@ export default function App() {
   const [mensagem,     setMensagem]     = useState('');
   const [msgTipo,      setMsgTipo]      = useState('');
 
+  // Modo da aplicação: 'jogo' ou 'treino'
+  const [modo, setModo] = useState('jogo');
+
+  // Estado do Modo Treino
+  const [letraTreino,    setLetraTreino]    = useState('A');
+  const [exemplos,       setExemplos]       = useState([]); // [{letra, pontos:[21x{x,y,z}]}]
+  const [nomeColetor,    setNomeColetor]    = useState('');
+
+  // Datasets importados (de ficheiros .json de várias pessoas)
+  const [datasetsImportados, setDatasetsImportados] = useState([]); // [{nomeArquivo, colecionadoPor, exemplos}]
+  const [modeloTreinado,     setModeloTreinado]     = useState(null); // modelo TensorFlow.js em memória
+  const [modeloDisponivel,   setModeloDisponivel]   = useState(false); // já existe modelo guardado?
+  const [treinando,          setTreinando]          = useState(false);
+  const [progressoTreino,    setProgressoTreino]    = useState({ epoch: 0, total: 0, acc: 0 });
+  const [usarModeloIA,       setUsarModeloIA]       = useState(false); // alternar entre regras e modelo treinado
+
   // Estado câmara
   const [camAtiva,     setCamAtiva]     = useState(false);
   const [modeloOk,     setModeloOk]     = useState(false);
@@ -555,6 +577,24 @@ export default function App() {
   const letraRef      = useRef(null);
   const contTimerRef  = useRef(null);
   const contSecsRef   = useRef(0);
+  const lmAtualRef    = useRef(null); // últimos pontos da mão (para o Modo Treino)
+  const modeloRef     = useRef(null); // modelo treinado (para usar dentro do onResults sem stale state)
+  const usarModeloRef = useRef(false);
+
+  // Mantém os refs sincronizados com o estado (para uso dentro do loop da câmara)
+  useEffect(() => { modeloRef.current = modeloTreinado; }, [modeloTreinado]);
+  useEffect(() => { usarModeloRef.current = usarModeloIA; }, [usarModeloIA]);
+
+  // Ao iniciar a app, verifica se já existe um modelo treinado guardado
+  useEffect(() => {
+    (async () => {
+      const modelo = await carregarModelo();
+      if (modelo) {
+        setModeloTreinado(modelo);
+        setModeloDisponivel(true);
+      }
+    })();
+  }, []);
 
   // ── Mostrar mensagem temporária ──────────────────────────────
   const mostrarMsg = useCallback((txt, tipo = '', ms = 2000) => {
@@ -618,7 +658,144 @@ export default function App() {
     letraRef.current = null;
   }, []);
 
-  // ── Câmara ───────────────────────────────────────────────────
+  // ── Modo Treino: capturar e exportar exemplos ────────────────
+  const capturarExemplo = useCallback(() => {
+    const lm = lmAtualRef.current;
+    if (!lm) {
+      mostrarMsg('⚠️ Não vejo a tua mão na câmara!', 'aviso');
+      return;
+    }
+    const pontos = lm.map(p => ({ x: p.x, y: p.y, z: p.z }));
+    setExemplos(prev => [...prev, { letra: letraTreino, pontos, ts: Date.now() }]);
+    mostrarMsg(`✅ Exemplo de "${letraTreino}" gravado!`, 'ganhou', 1200);
+  }, [letraTreino, mostrarMsg]);
+
+  const apagarUltimoExemplo = useCallback(() => {
+    setExemplos(prev => prev.slice(0, -1));
+  }, []);
+
+  const apagarTodosExemplos = useCallback(() => {
+    if (window.confirm('Apagar todos os exemplos gravados nesta sessão?')) {
+      setExemplos([]);
+    }
+  }, []);
+
+  const exportarExemplos = useCallback(() => {
+    if (exemplos.length === 0) {
+      mostrarMsg('⚠️ Ainda não gravaste nenhum exemplo!', 'aviso');
+      return;
+    }
+    const dataset = {
+      colecionadoPor: nomeColetor || 'anonimo',
+      criadoEm: new Date().toISOString(),
+      exemplos,
+    };
+    const blob = new Blob([JSON.stringify(dataset, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    const nomeArquivo = `lgp-dataset-${(nomeColetor || 'anonimo').replace(/\s+/g,'_')}-${Date.now()}.json`;
+    a.href = url;
+    a.download = nomeArquivo;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    mostrarMsg('📦 Ficheiro exportado!', 'ganhou', 1500);
+  }, [exemplos, nomeColetor, mostrarMsg]);
+
+  // ── Importar ficheiros .json de outras pessoas ──────────────
+  const importarFicheiros = useCallback((fileList) => {
+    const ficheiros = Array.from(fileList);
+    let pendentes = ficheiros.length;
+    const novos = [];
+
+    ficheiros.forEach(file => {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        try {
+          const dados = JSON.parse(e.target.result);
+          if (!Array.isArray(dados.exemplos)) throw new Error('formato inválido');
+          novos.push({
+            nomeArquivo: file.name,
+            colecionadoPor: dados.colecionadoPor || 'desconhecido',
+            exemplos: dados.exemplos,
+          });
+        } catch (err) {
+          mostrarMsg(`⚠️ Ficheiro "${file.name}" inválido, ignorado.`, 'aviso');
+        } finally {
+          pendentes--;
+          if (pendentes === 0) {
+            setDatasetsImportados(prev => [...prev, ...novos]);
+            mostrarMsg(`📂 ${novos.length} ficheiro(s) importado(s)!`, 'ganhou', 1500);
+          }
+        }
+      };
+      reader.readAsText(file);
+    });
+  }, [mostrarMsg]);
+
+  const removerDataset = useCallback((nomeArquivo) => {
+    setDatasetsImportados(prev => prev.filter(d => d.nomeArquivo !== nomeArquivo));
+  }, []);
+
+  // Todos os exemplos disponíveis para treino: os gravados agora + os importados
+  const todosExemplosTreino = useMemo(() => {
+    const dosImportados = juntarDatasets(datasetsImportados);
+    return [...exemplos, ...dosImportados];
+  }, [exemplos, datasetsImportados]);
+
+  const contagemTotalPorLetra = useMemo(() => {
+    const contagens = {};
+    ALFABETO.forEach(l => { contagens[l] = 0; });
+    todosExemplosTreino.forEach(e => { contagens[e.letra] = (contagens[e.letra] || 0) + 1; });
+    return contagens;
+  }, [todosExemplosTreino]);
+
+  // ── Treinar o modelo com todos os exemplos disponíveis ───────
+  const iniciarTreino = useCallback(async () => {
+    if (todosExemplosTreino.length < ALFABETO.length) {
+      mostrarMsg('⚠️ Precisas de exemplos de todas as letras para treinar!', 'aviso', 3000);
+      return;
+    }
+    setTreinando(true);
+    setProgressoTreino({ epoch: 0, total: 60, acc: 0 });
+    try {
+      const modelo = await treinarModelo(todosExemplosTreino, {
+        epochs: 60,
+        onProgress: (epoch, total, acc) => {
+          setProgressoTreino({ epoch, total, acc: acc || 0 });
+        },
+      });
+      await guardarModelo(modelo);
+      setModeloTreinado(modelo);
+      setModeloDisponivel(true);
+      setUsarModeloIA(true);
+      mostrarMsg('🎉 Modelo treinado e guardado com sucesso!', 'ganhou', 3000);
+    } catch (err) {
+      mostrarMsg(`⚠️ Erro ao treinar: ${err.message}`, 'aviso', 4000);
+    } finally {
+      setTreinando(false);
+    }
+  }, [todosExemplosTreino, mostrarMsg]);
+
+  const apagarModelo = useCallback(async () => {
+    if (!window.confirm('Apagar o modelo treinado guardado neste dispositivo?')) return;
+    await apagarModeloGuardado();
+    setModeloTreinado(null);
+    setModeloDisponivel(false);
+    setUsarModeloIA(false);
+    mostrarMsg('🗑️ Modelo apagado.', '', 1500);
+  }, [mostrarMsg]);
+
+  // Contagem de exemplos por letra (para mostrar progresso)
+  const contagemPorLetra = useMemo(() => {
+    const contagens = {};
+    ALFABETO.forEach(l => { contagens[l] = 0; });
+    exemplos.forEach(e => { contagens[e.letra] = (contagens[e.letra] || 0) + 1; });
+    return contagens;
+  }, [exemplos]);
+
+
   const ligarCamera = useCallback(async () => {
     try {
       const s = await navigator.mediaDevices.getUserMedia({
@@ -665,6 +842,7 @@ export default function App() {
 
         if (results.multiHandLandmarks && results.multiHandLandmarks.length > 0) {
           const lmNorm = results.multiHandLandmarks[0];
+          lmAtualRef.current = lmNorm; // guarda para o Modo Treino poder capturar
 
           // Converter coordenadas normalizadas para pixels para desenhar
           const kpPx = lmNorm.map(p => ({
@@ -674,8 +852,13 @@ export default function App() {
           }));
           desenharMao(ctx, kpPx);
 
-          // detetarLetra usa coordenadas normalizadas (0..1)
-          const { letra, conf } = detetarLetra(lmNorm);
+          // Escolhe entre o modelo treinado (IA) ou as regras geométricas fixas
+          let letra, conf;
+          if (usarModeloRef.current && modeloRef.current) {
+            ({ letra, conf } = preverComModelo(modeloRef.current, lmNorm));
+          } else {
+            ({ letra, conf } = detetarLetra(lmNorm));
+          }
           setLetraCam(letra);
           setConfianca(conf);
 
@@ -692,6 +875,7 @@ export default function App() {
           setLetraCam(null);
           setConfianca(0);
           resetContagem();
+          lmAtualRef.current = null;
         }
       });
 
@@ -819,14 +1003,153 @@ export default function App() {
           </div>
           <span>🔧</span>
         </div>
+        <button
+          className="btn-modo"
+          onClick={() => setModo(modo === 'jogo' ? 'treino' : 'jogo')}
+        >
+          {modo === 'jogo' ? '🎓 Modo Treino' : '🎮 Voltar ao Jogo'}
+        </button>
         <div className="pontuacao">⭐ {pontuacao} pts</div>
       </header>
 
       {/* Dica */}
-      <div className="dica-bar">
-        <span>💡 {entrada.dica}</span>
-        <span className="tent-count">Tentativas: {tentativas.length}/{MAX_TENT}</span>
-      </div>
+      {modo === 'jogo' && (
+        <div className="dica-bar">
+          <span>💡 {entrada.dica}</span>
+          <span className="tent-count">Tentativas: {tentativas.length}/{MAX_TENT}</span>
+        </div>
+      )}
+
+      {/* ── MODO TREINO ─────────────────────────────────────────── */}
+      {modo === 'treino' && (
+        <div className="treino-bloco">
+          <div className="treino-aviso">
+            <p>🎓 <strong>Modo Treino</strong> — grava exemplos do teu gesto para cada letra. Estes dados vão ajudar a treinar um modelo mais preciso de reconhecimento.</p>
+            <p className="treino-aviso-sub">Os dados ficam só neste dispositivo até exportares o ficheiro. Nada é enviado para a internet.</p>
+          </div>
+
+          <div className="treino-config">
+            <label>
+              O teu nome (para identificar o ficheiro):
+              <input
+                type="text"
+                value={nomeColetor}
+                onChange={e => setNomeColetor(e.target.value)}
+                placeholder="ex: Xavier"
+              />
+            </label>
+          </div>
+
+          <div className="treino-letra-select">
+            <span>Letra a gravar:</span>
+            <div className="treino-letras-grid">
+              {ALFABETO.map(l => (
+                <button
+                  key={l}
+                  className={`treino-letra-btn ${letraTreino === l ? 'ativa' : ''}`}
+                  onClick={() => setLetraTreino(l)}
+                >
+                  {l}
+                  <span className="treino-letra-count">{contagemPorLetra[l] || 0}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="treino-acoes">
+            <button className="btn-capturar" onClick={capturarExemplo} disabled={!camAtiva}>
+              📸 Gravar exemplo de "{letraTreino}"
+            </button>
+            <button className="btn-secundario" onClick={apagarUltimoExemplo} disabled={exemplos.length === 0}>
+              ↩️ Apagar último
+            </button>
+            <button className="btn-secundario" onClick={apagarTodosExemplos} disabled={exemplos.length === 0}>
+              🗑️ Apagar tudo
+            </button>
+          </div>
+
+          <div className="treino-resumo">
+            <p>Total de exemplos gravados nesta sessão: <strong>{exemplos.length}</strong></p>
+            <button className="btn-exportar" onClick={exportarExemplos} disabled={exemplos.length === 0}>
+              📦 Exportar ficheiro .json
+            </button>
+          </div>
+
+          {!camAtiva && (
+            <p className="treino-aviso-cam">⚠️ Liga a câmara abaixo para poderes gravar exemplos.</p>
+          )}
+
+          {/* ── Importar ficheiros de outras pessoas ──────────── */}
+          <div className="treino-secao">
+            <h4>📂 Importar ficheiros de outras pessoas</h4>
+            <p className="treino-secao-sub">Carrega aqui os ficheiros .json que outras pessoas exportaram do Modo Treino delas.</p>
+            <input
+              type="file"
+              accept=".json"
+              multiple
+              onChange={e => { if (e.target.files.length) importarFicheiros(e.target.files); e.target.value=''; }}
+              className="treino-input-ficheiro"
+            />
+            {datasetsImportados.length > 0 && (
+              <ul className="treino-lista-ficheiros">
+                {datasetsImportados.map(d => (
+                  <li key={d.nomeArquivo}>
+                    <span>📄 {d.nomeArquivo} — <em>{d.colecionadoPor}</em> ({d.exemplos.length} exemplos)</span>
+                    <button onClick={() => removerDataset(d.nomeArquivo)}>✕</button>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+
+          {/* ── Treinar o modelo ─────────────────────────────── */}
+          <div className="treino-secao">
+            <h4>🧠 Treinar modelo de Inteligência Artificial</h4>
+            <p className="treino-secao-sub">
+              Total disponível para treino: <strong>{todosExemplosTreino.length}</strong> exemplos
+              {' '}({ALFABETO.filter(l => contagemTotalPorLetra[l] > 0).length}/26 letras com pelo menos 1 exemplo)
+            </p>
+
+            <div className="treino-letras-grid treino-letras-grid-mini">
+              {ALFABETO.map(l => (
+                <div key={l} className={`treino-mini-cel ${contagemTotalPorLetra[l] > 0 ? 'tem' : 'falta'}`}>
+                  {l}<span>{contagemTotalPorLetra[l]}</span>
+                </div>
+              ))}
+            </div>
+
+            {treinando ? (
+              <div className="treino-progresso">
+                <div className="treino-progresso-bar">
+                  <div
+                    className="treino-progresso-fill"
+                    style={{ width: `${(progressoTreino.epoch / progressoTreino.total) * 100}%` }}
+                  />
+                </div>
+                <p>Época {progressoTreino.epoch}/{progressoTreino.total} — precisão: {Math.round((progressoTreino.acc||0)*100)}%</p>
+              </div>
+            ) : (
+              <button className="btn-treinar" onClick={iniciarTreino} disabled={todosExemplosTreino.length < ALFABETO.length}>
+                🚀 Treinar modelo agora
+              </button>
+            )}
+
+            {modeloDisponivel && !treinando && (
+              <div className="treino-modelo-pronto">
+                <label className="treino-toggle">
+                  <input
+                    type="checkbox"
+                    checked={usarModeloIA}
+                    onChange={e => setUsarModeloIA(e.target.checked)}
+                  />
+                  Usar modelo de IA treinado (em vez das regras fixas) durante o jogo e aqui
+                </label>
+                <button className="btn-secundario" onClick={apagarModelo}>🗑️ Apagar modelo guardado</button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Área central: câmara + grelha */}
       <div className="centro">
@@ -859,11 +1182,21 @@ export default function App() {
             <canvas ref={canvasRef} className="cam-canvas" />
           </div>
 
-          {/* Letra detetada + contagem */}
-          {camAtiva && (
+          {/* Feedback simples no Modo Treino */}
+          {camAtiva && modo === 'treino' && (
             <div className="cam-info">
               <div style={{background:'#0f172a',color:'#fbbf24',fontSize:'11px',padding:'6px 8px',borderRadius:6,marginBottom:8,fontFamily:'monospace',lineHeight:1.6}}>
-                🔍 {debugInfo} | Letra: <b>{letraCam || 'nenhuma'}</b> | Conf: {confianca}%
+                🔍 {debugInfo} | Modo deteção: <b>{usarModeloIA && modeloTreinado ? '🧠 IA' : '📐 Regras'}</b> | Letra: <b>{letraCam || 'nenhuma'}</b>
+              </div>
+              <p className="treino-feedback-dica">Coloca a mão a fazer o gesto de "{letraTreino}" e clica em "Gravar exemplo" acima.</p>
+            </div>
+          )}
+
+          {/* Letra detetada + contagem (apenas no modo jogo) */}
+          {camAtiva && modo === 'jogo' && (
+            <div className="cam-info">
+              <div style={{background:'#0f172a',color:'#fbbf24',fontSize:'11px',padding:'6px 8px',borderRadius:6,marginBottom:8,fontFamily:'monospace',lineHeight:1.6}}>
+                🔍 {debugInfo} | {usarModeloIA && modeloTreinado ? '🧠 IA' : '📐 Regras'} | Letra: <b>{letraCam || 'nenhuma'}</b> | Conf: {confianca}%
               </div>
               <div className="cam-label">Gesto detetado:</div>
               <div className="letra-grande">{letraCam || '—'}</div>
@@ -913,7 +1246,8 @@ export default function App() {
           )}
         </div>
 
-        {/* --- Grelha de tentativas --- */}
+        {/* --- Grelha de tentativas (apenas no modo jogo) --- */}
+        {modo === 'jogo' && (
         <div className="grelha-bloco">
           <div className="grelha">
             {Array.from({ length: MAX_TENT }).map((_, ri) => {
@@ -943,6 +1277,7 @@ export default function App() {
             <span>⬜ Não existe</span>
           </div>
         </div>
+        )}
       </div>
 
       {/* Mensagem de estado */}
@@ -976,15 +1311,10 @@ export default function App() {
               className={`manual-carta ${letraManual === l ? 'destaque' : ''} ${estadoLetras[l] || ''}`}
               onClick={() => setLetraManual(letraManual === l ? null : l)}
             >
-              <div className="manual-letra">{l}</div>
+              <HandSVG letra={l} />
             </div>
           ))}
         </div>
-        {letraManual && (
-          <div className="manual-detalhe">
-            <HandSVG letra={letraManual} />
-          </div>
-        )}
       </div>
 
     </div>
